@@ -19,10 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      # Públicas por diseño (la seguridad la dan el login y RLS).
-      # Se configuran en Settings → Secrets and variables → Actions → Variables.
-      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      # Públicas por diseño (la seguridad la dan el login y RLS): si no hay variables en
+      # Settings → Secrets and variables → Actions → Variables, se usan las del proyecto.
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://mqszfxwnlhbbkonmfjqn.supabase.co' }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_X42w3GpBDgaOYD0HNcWpkg_v8swh1fF' }}
     steps:
       - uses: actions/checkout@v4
         with:

@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router/dom";
 import { router } from "./app/router";
+import { isSupabaseConfigured } from "./lib/supabase";
 import "./index.css";
 
 const root = document.getElementById("root");
@@ -17,8 +18,19 @@ const queryClient = new QueryClient({
 
 createRoot(root).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
+    {isSupabaseConfigured ? (
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    ) : (
+      // Despliegue sin VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY: aviso claro.
+      <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center px-5 text-center">
+        <h1 className="text-3xl font-extrabold">House Hub no está lista todavía</h1>
+        <p className="mt-3 text-xl">
+          Falta configurar la conexión. Si eres quien administra la app, revisa las variables de
+          entorno.
+        </p>
+      </main>
+    )}
   </StrictMode>,
 );
