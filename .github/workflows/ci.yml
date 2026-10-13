@@ -1,0 +1,44 @@
+name: CI
+
+# Vercel despliega solo desde su integración con GitHub; aquí se comprueba la calidad.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Públicas por diseño (la seguridad la dan el login y RLS).
+      # Se configuran en Settings → Secrets and variables → Actions → Variables.
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Auditoría de dependencias
+        run: npm audit --omit=dev --audit-level=high
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Navegadores para las pruebas (Safari/iPhone y Chrome/Android)
+        run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:e2e

@@ -1,0 +1,55 @@
+<!--
+  Plantilla para Supabase → Authentication → Emails → Templates.
+  Pégala en «Magic Link» Y en «Confirm signup» (las dos), con el asunto:
+    Tu código para entrar en House Hub: {{ .Token }}
+  El código va grande y arriba; el enlace es una alternativa.
+-->
+<div
+  style="
+    font-family:
+      -apple-system,
+      Segoe UI,
+      Roboto,
+      Arial,
+      sans-serif;
+    font-size: 18px;
+    line-height: 1.5;
+    color: #111111;
+    max-width: 480px;
+  "
+>
+  <h1 style="font-size: 26px; margin: 0 0 16px">Tu código para entrar en House Hub</h1>
+  <p style="margin: 0 0 8px">Escribe este código en la app:</p>
+  <p
+    style="
+      font-size: 40px;
+      font-weight: bold;
+      letter-spacing: 8px;
+      margin: 0 0 24px;
+      color: #1e3a5f;
+    "
+  >
+    {{ .Token }}
+  </p>
+  <p style="margin: 0 0 16px">El código caduca en 15 minutos.</p>
+  <p style="margin: 0 0 24px">
+    O, si lo prefieres, toca este botón:<br />
+    <a
+      href="{{ .SiteURL }}/acceso/confirmar?token_hash={{ .TokenHash }}"
+      style="
+        display: inline-block;
+        margin-top: 8px;
+        padding: 14px 24px;
+        background: #1e3a5f;
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 12px;
+        font-weight: bold;
+      "
+      >Entrar en House Hub</a
+    >
+  </p>
+  <p style="font-size: 15px; color: #3f3f46; margin: 0">
+    Si no has pedido este código, ignora este correo: nadie puede entrar sin él.
+  </p>
+</div>
