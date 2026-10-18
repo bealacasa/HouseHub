@@ -4,13 +4,12 @@ import { z } from "zod";
 import { toKey, type DateKey } from "@/features/calendar/stays";
 import { getSupabase } from "@/lib/supabase";
 
-/** Evento del pueblo: fiestas, mercado, procesión… */
+/** Evento del pueblo: fiestas, mercado, procesión… De un día o de varios. */
 export type VillageEvent = {
   id: string;
   title: string;
-  date: DateKey;
-  /** "HH:MM" o null si no tiene hora. */
-  time: string | null;
+  start: DateKey;
+  end: DateKey;
   place: string;
   note: string;
   createdBy: string | null;
@@ -19,36 +18,41 @@ export type VillageEvent = {
 const eventRow = z.object({
   id: z.uuid(),
   title: z.string(),
-  date: z.string(),
-  start_time: z.string().nullable(),
+  start_date: z.string(),
+  end_date: z.string(),
   place: z.string(),
   note: z.string(),
   created_by: z.uuid().nullable(),
 });
 
-export const eventInputSchema = z.object({
-  title: z.string().trim().min(1, "Ponle un nombre al evento.").max(100, "Máximo 100 letras."),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elige el día."),
-  time: z
-    .string()
-    .refine((t) => t === "" || /^([01]\d|2[0-3]):[0-5]\d$/.test(t), "La hora no es válida."),
-  place: z.string().trim().max(100, "Máximo 100 letras."),
-  note: z.string().trim().max(500, "Máximo 500 letras."),
-});
+const dateKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elige la fecha.");
+
+export const eventInputSchema = z
+  .object({
+    title: z.string().trim().min(1, "Ponle un nombre al evento.").max(100, "Máximo 100 letras."),
+    start: dateKey,
+    end: dateKey,
+    place: z.string().trim().max(100, "Máximo 100 letras."),
+    note: z.string().trim().max(500, "Máximo 500 letras."),
+  })
+  .refine((e) => e.end >= e.start, {
+    message: "La fecha de fin no puede ser antes que la de inicio.",
+    path: ["end"],
+  });
 export type EventInput = z.input<typeof eventInputSchema>;
 
 export const eventsKey = ["events"] as const;
 
-/** Eventos desde hace un mes en adelante, por fecha y hora. */
+/** Eventos que acaban hace menos de un mes, o más adelante; por fecha de inicio. */
 export function useEvents() {
   return useQuery({
     queryKey: eventsKey,
     queryFn: async (): Promise<VillageEvent[]> => {
       const { data, error } = await getSupabase()
         .from("village_events")
-        .select("id, title, date, start_time, place, note, created_by")
-        .gte("date", toKey(addDays(new Date(), -31)))
-        .order("date");
+        .select("id, title, start_date, end_date, place, note, created_by")
+        .gte("end_date", toKey(addDays(new Date(), -31)))
+        .order("start_date");
       if (error) throw error;
       return (data ?? [])
         .map((raw) => {
@@ -56,20 +60,21 @@ export function useEvents() {
           return {
             id: r.id,
             title: r.title,
-            date: r.date,
-            time: r.start_time ? r.start_time.slice(0, 5) : null,
+            start: r.start_date,
+            end: r.end_date,
             place: r.place,
             note: r.note,
             createdBy: r.created_by,
           };
         })
-        .sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""));
+        .sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
     },
   });
 }
 
+/** Eventos que están en marcha ese día. */
 export const eventsOn = (events: readonly VillageEvent[], day: DateKey) =>
-  events.filter((e) => e.date === day);
+  events.filter((e) => e.start <= day && day <= e.end);
 
 export function useSaveEvent(houseId: string) {
   const queryClient = useQueryClient();
@@ -78,8 +83,8 @@ export function useSaveEvent(houseId: string) {
       const e = eventInputSchema.parse(input);
       const row = {
         title: e.title,
-        date: e.date,
-        start_time: e.time || null,
+        start_date: e.start,
+        end_date: e.end,
         place: e.place,
         note: e.note,
       };

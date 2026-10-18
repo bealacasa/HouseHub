@@ -59,3 +59,20 @@ describe("instrucciones", () => {
     expect(await screen.findByText("Paso 1 de 2")).toBeTruthy();
   });
 });
+
+describe("menú Más", () => {
+  it("enseña todas las secciones, también las instrucciones", async () => {
+    installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    renderAt("/mas");
+    for (const name of [
+      "Instrucciones",
+      "Notas",
+      "Eventos del pueblo",
+      "La familia",
+      "La casa",
+      "Mi cuenta",
+    ]) {
+      expect(await screen.findByRole("link", { name: new RegExp(name) })).toBeTruthy();
+    }
+  });
+});

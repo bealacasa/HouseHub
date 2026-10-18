@@ -2,8 +2,8 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router";
 import { Avatar } from "@/components/Avatar";
-import { UsersIcon } from "@/components/icons";
-import { Card, buttonSecondary } from "@/components/ui";
+import { BookIcon, CalendarIcon, EuroIcon, ListIcon, UsersIcon } from "@/components/icons";
+import { Card, buttonSecondary, cardShadow } from "@/components/ui";
 import { useMe } from "@/features/auth/RequireAuth";
 import { StayCard } from "@/features/calendar/CalendarPage";
 import { staysOn, toKey, useStays } from "@/features/calendar/stays";
@@ -24,22 +24,30 @@ export function HomePage() {
 
   return (
     <>
-      <header className="mb-6">
-        <p className="text-lg font-semibold text-muted first-letter:uppercase">
-          {format(new Date(), "EEEE d 'de' MMMM", { locale: es })}
-        </p>
-        <h1 className="text-4xl font-extrabold leading-tight tracking-tight">
-          Hola, {profile.displayName}
-        </h1>
-      </header>
-      <div className="space-y-5">
+      {/* Bienvenida: sobre la foto de la casa (si hay) o sobre el degradado de la app. */}
+      <header
+        className={`relative mb-5 overflow-hidden rounded-[2rem] bg-linear-to-br from-accent to-accent-2 p-6 shadow-xl shadow-accent/20 ${photo.data ? "text-white" : "text-accent-contrast"}`}
+      >
         {photo.data && (
-          <img
-            src={photo.data}
-            alt={`Foto de ${house.name}`}
-            className="aspect-[16/10] w-full rounded-3xl object-cover shadow-lg"
-          />
+          <>
+            <img src={photo.data} alt="" className="absolute inset-0 size-full object-cover" />
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-black/10"
+            />
+          </>
         )}
+        <div className={`relative ${photo.data ? "pt-24" : ""}`}>
+          <p className="text-lg font-semibold opacity-90 first-letter:uppercase">
+            {format(new Date(), "EEEE d 'de' MMMM", { locale: es })}
+          </p>
+          <h1 className="text-4xl font-extrabold leading-tight tracking-tight">
+            Hola, {profile.displayName}
+          </h1>
+        </div>
+      </header>
+      <QuickActions />
+      <div className="mt-6 space-y-5">
         {isAdmin && onlyMe && (
           <Card className="border-accent/40 bg-accent-soft">
             <div className="flex items-start gap-4">
@@ -66,7 +74,7 @@ export function HomePage() {
         <BalanceLink />
         {house.notes && (
           <Card>
-            <h2 className="text-2xl font-bold">📝 Notas de la casa</h2>
+            <h2 className="text-2xl font-bold">ℹ️ Información de la casa</h2>
             <p className="mt-2 whitespace-pre-line text-lg">{house.notes}</p>
           </Card>
         )}
@@ -175,5 +183,58 @@ function BalanceLink() {
     <Link to="/gastos" className="block rounded-3xl active:scale-[0.99]">
       <MyBalance cents={mine} />
     </Link>
+  );
+}
+
+/** Accesos rápidos a lo que más se hace (1 toque). */
+const ACTIONS = [
+  {
+    to: "/calendario/nueva",
+    label: "Reservar días",
+    Icon: CalendarIcon,
+    tint: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
+  },
+  {
+    to: "/gastos/nuevo",
+    label: "Apuntar gasto",
+    Icon: EuroIcon,
+    tint: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
+  },
+  {
+    to: "/notas",
+    label: "Añadir nota",
+    Icon: ListIcon,
+    tint: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
+  },
+  {
+    to: "/instrucciones",
+    label: "Instrucciones",
+    Icon: BookIcon,
+    tint: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200",
+  },
+] as const;
+
+function QuickActions() {
+  return (
+    <nav aria-label="Accesos rápidos">
+      <ul className="grid grid-cols-2 gap-3">
+        {ACTIONS.map(({ to, label, Icon, tint }) => (
+          <li key={to}>
+            <Link
+              to={to}
+              className={`flex min-h-28 flex-col justify-between gap-2 rounded-3xl border border-border/70 bg-surface p-4 active:scale-[0.98] ${cardShadow}`}
+            >
+              <span
+                aria-hidden="true"
+                className={`grid size-12 shrink-0 place-items-center rounded-2xl ${tint}`}
+              >
+                <Icon />
+              </span>
+              <span className="text-lg font-bold leading-tight break-words">{label}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }

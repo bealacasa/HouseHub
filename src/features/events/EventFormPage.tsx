@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { useConfirm } from "@/components/ConfirmDialog";
 import {
+  Card,
   ErrorMessage,
   PageTitle,
   backLink,
@@ -9,7 +10,7 @@ import {
   buttonPrimary,
   inputClass,
 } from "@/components/ui";
-import { toKey } from "@/features/calendar/stays";
+import { periodLabel, toKey } from "@/features/calendar/stays";
 import { useHouse } from "@/features/house/HouseGate";
 import { errorMessage } from "@/features/house/house";
 import {
@@ -39,24 +40,34 @@ export function EventFormPage() {
   return <EventForm key={id ?? "nuevo"} event={event} />;
 }
 
+/** "3 días" / "1 día" (contando el primero y el último). */
+function daysLabel(start: string, end: string): string {
+  const n = Math.round((Date.parse(end) - Date.parse(start)) / 86_400_000) + 1;
+  return n === 1 ? "1 día" : `${n} días`;
+}
+
+const label = "mb-2 block text-xl font-semibold";
+
 function EventForm({ event }: { event?: VillageEvent }) {
   const { house, me, isAdmin } = useHouse();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [dialog, confirm] = useConfirm();
+  const firstDay = event?.start ?? params.get("dia") ?? toKey(new Date());
   const [title, setTitle] = useState(event?.title ?? "");
-  const [date, setDate] = useState(event?.date ?? params.get("dia") ?? toKey(new Date()));
-  const [time, setTime] = useState(event?.time ?? "");
+  const [start, setStart] = useState(firstDay);
+  const [end, setEnd] = useState(event?.end ?? firstDay);
   const [place, setPlace] = useState(event?.place ?? "");
   const [note, setNote] = useState(event?.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const save = useSaveEvent(house.id);
   const remove = useDeleteEvent();
   const canEdit = !event || isAdmin || event.createdBy === me.userId;
+  const validRange = start !== "" && end !== "" && end >= start;
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const input = { title, date, time, place, note };
+    const input = { title, start, end, place, note };
     const parsed = eventInputSchema.safeParse(input);
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Revisa los datos.");
@@ -79,62 +90,78 @@ function EventForm({ event }: { event?: VillageEvent }) {
     if (ok) remove.mutate(event.id, { onSuccess: () => navigate("/eventos", { replace: true }) });
   }
 
-  const field = (id: string, label: string, input: React.ReactNode) => (
-    <div>
-      <label htmlFor={id} className="mb-2 block text-xl font-semibold">
-        {label}
-      </label>
-      {input}
-    </div>
-  );
-
   return (
     <>
       <Link to="/eventos" className={backLink}>
         ← Eventos
       </Link>
-      <PageTitle title={event ? "El evento" : "Nuevo evento"} />
+      <PageTitle
+        title={event ? "El evento" : "Nuevo evento"}
+        subtitle="Fiestas, mercado, procesiones…"
+      />
       <form noValidate onSubmit={onSubmit} className="space-y-5">
         <fieldset disabled={!canEdit} className="space-y-5">
-          {field(
-            "ev-title",
-            "¿Qué es?",
+          <Card>
+            <label htmlFor="ev-title" className={label}>
+              ¿Qué es?
+            </label>
             <input
               id="ev-title"
               maxLength={100}
               placeholder="Por ejemplo: Fiestas de San Roque"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className={inputClass}
-            />,
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            {field(
-              "ev-date",
-              "Día",
-              <input
-                id="ev-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={inputClass}
-              />,
+              className={`${inputClass} text-xl font-semibold`}
+            />
+          </Card>
+
+          <Card>
+            <p className={label}>¿Cuándo?</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="ev-start" className="mb-1 block text-lg text-muted">
+                  Empieza
+                </label>
+                <input
+                  id="ev-start"
+                  type="date"
+                  value={start}
+                  onChange={(e) => {
+                    setStart(e.target.value);
+                    if (end < e.target.value) setEnd(e.target.value);
+                  }}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="ev-end" className="mb-1 block text-lg text-muted">
+                  Termina
+                </label>
+                <input
+                  id="ev-end"
+                  type="date"
+                  min={start}
+                  value={end}
+                  onChange={(e) => setEnd(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            {validRange && (
+              <p
+                aria-live="polite"
+                className="mt-4 flex items-center gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-lg font-semibold text-rose-900 dark:bg-rose-950/50 dark:text-rose-100"
+              >
+                <span aria-hidden="true">⭐</span>
+                {periodLabel({ start, end })} · {daysLabel(start, end)}
+              </p>
             )}
-            {field(
-              "ev-time",
-              "Hora (opcional)",
-              <input
-                id="ev-time"
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className={inputClass}
-              />,
-            )}
-          </div>
-          {field(
-            "ev-place",
-            "Dónde (opcional)",
+          </Card>
+
+          <Card>
+            <label htmlFor="ev-place" className={label}>
+              ¿Dónde? <span className="font-normal text-muted">(opcional)</span>
+            </label>
             <input
               id="ev-place"
               maxLength={100}
@@ -142,21 +169,22 @@ function EventForm({ event }: { event?: VillageEvent }) {
               value={place}
               onChange={(e) => setPlace(e.target.value)}
               className={inputClass}
-            />,
-          )}
-          {field(
-            "ev-note",
-            "Nota (opcional)",
+            />
+            <label htmlFor="ev-note" className={`${label} mt-5`}>
+              Nota <span className="font-normal text-muted">(opcional)</span>
+            </label>
             <textarea
               id="ev-note"
               rows={3}
               maxLength={500}
+              placeholder="Por ejemplo: comida popular el domingo"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className={`${inputClass} py-3`}
-            />,
-          )}
+            />
+          </Card>
         </fieldset>
+
         {(error || save.error || remove.error) && (
           <ErrorMessage>{error ?? errorMessage(save.error ?? remove.error)}</ErrorMessage>
         )}

@@ -54,11 +54,11 @@ describe("notas de la casa", () => {
 });
 
 describe("eventos del pueblo", () => {
-  it("valida nombre, día y hora", () => {
-    const base = { title: "Fiestas", date: "2026-08-16", time: "", place: "", note: "" };
+  it("valida nombre y que el fin no sea antes del inicio", () => {
+    const base = { title: "Fiestas", start: "2026-08-14", end: "2026-08-16", place: "", note: "" };
     expect(eventInputSchema.safeParse(base).success).toBe(true);
-    expect(eventInputSchema.safeParse({ ...base, time: "19:30" }).success).toBe(true);
-    expect(eventInputSchema.safeParse({ ...base, time: "25:00" }).success).toBe(false);
+    expect(eventInputSchema.safeParse({ ...base, end: "2026-08-13" }).success).toBe(false);
+    expect(eventInputSchema.safeParse({ ...base, start: "" }).success).toBe(false);
     expect(eventInputSchema.safeParse({ ...base, title: " " }).success).toBe(false);
   });
 
@@ -68,14 +68,14 @@ describe("eventos del pueblo", () => {
     fake.tables.village_events!.push({
       id: "66666666-6666-4666-8666-666666666666",
       title: "Mercado",
-      date: day,
-      start_time: "10:00:00",
+      start_date: day,
+      end_date: day,
       place: "La plaza",
       note: "",
       created_by: null,
     });
     const memory = renderAt(`/calendario?dia=${day}`);
-    expect(await screen.findByRole("link", { name: /Mercado, .* a las 10:00/ })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: /Mercado\..*en La plaza/ })).toBeTruthy();
     await memory.navigate("/eventos");
     expect(await screen.findByRole("heading", { name: "Eventos del pueblo" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Mercado/ })).toBeTruthy();

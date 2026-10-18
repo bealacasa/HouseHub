@@ -77,24 +77,37 @@ export function CalendarPage() {
               </span>
             ))}
           </div>
-          {monthGrid(month).map((week) => (
-            <div role="row" key={week.map(toKey).join()} className="grid grid-cols-7">
-              {week.map((date) => (
-                <DayCell
-                  key={toKey(date)}
-                  date={date}
-                  inMonth={isSameMonth(date, month)}
-                  isToday={toKey(date) === today}
-                  isSelected={toKey(date) === selected}
-                  stays={staysOn(all, toKey(date))}
-                  events={eventsOn(allEvents, toKey(date))}
-                  lanes={lanes}
-                  members={members}
-                  onSelect={select}
-                />
-              ))}
-            </div>
-          ))}
+          {monthGrid(month).map((week) => {
+            // Solo el espacio de las barras que de verdad hay esta semana.
+            const laneCount = Math.min(
+              MAX_LANES,
+              Math.max(
+                0,
+                ...week.flatMap((d) =>
+                  staysOn(all, toKey(d)).map((s) => (lanes.get(s.id) ?? 0) + 1),
+                ),
+              ),
+            );
+            return (
+              <div role="row" key={week.map(toKey).join()} className="grid grid-cols-7">
+                {week.map((date) => (
+                  <DayCell
+                    key={toKey(date)}
+                    date={date}
+                    inMonth={isSameMonth(date, month)}
+                    isToday={toKey(date) === today}
+                    isSelected={toKey(date) === selected}
+                    stays={staysOn(all, toKey(date))}
+                    events={eventsOn(allEvents, toKey(date))}
+                    lanes={lanes}
+                    laneCount={laneCount}
+                    members={members}
+                    onSelect={select}
+                  />
+                ))}
+              </div>
+            );
+          })}
         </div>
         <Legend members={members} stays={all} />
       </Card>
@@ -179,6 +192,7 @@ function DayCell({
   stays,
   events,
   lanes,
+  laneCount,
   members,
   onSelect,
 }: {
@@ -189,16 +203,17 @@ function DayCell({
   stays: Stay[];
   events: VillageEvent[];
   lanes: Map<string, number>;
+  laneCount: number;
   members: readonly Member[];
   onSelect: (day: DateKey) => void;
 }) {
   const key = toKey(date);
   const nameOf = (id: string) => members.find((m) => m.id === id)?.displayName ?? "Alguien";
   const who = stays.map((s) => nameOf(s.memberId)).join(", ");
-  const byLane: (Stay | undefined)[] = Array.from({ length: MAX_LANES }, () => undefined);
+  const byLane: (Stay | undefined)[] = Array.from({ length: laneCount }, () => undefined);
   for (const s of stays) {
     const lane = lanes.get(s.id) ?? 0;
-    if (lane < MAX_LANES) byLane[lane] = s;
+    if (lane < laneCount) byLane[lane] = s;
   }
 
   return (
@@ -210,10 +225,10 @@ function DayCell({
       aria-label={`${longDate(key)}${isToday ? ", hoy" : ""}${who ? `: va ${who}` : ": libre"}${
         events.length > 0 ? `. Evento: ${events.map((e) => e.title).join(", ")}` : ""
       }`}
-      className={`flex min-h-[4.25rem] flex-col items-stretch pt-1 ${inMonth ? "" : "opacity-45"}`}
+      className={`flex flex-col items-stretch pb-1.5 pt-0.5 ${inMonth ? "" : "opacity-45"}`}
     >
       <span
-        className={`mx-auto grid size-10 place-items-center rounded-full text-lg font-semibold tabular-nums ${
+        className={`relative mx-auto grid size-10 place-items-center rounded-full text-lg font-semibold tabular-nums ${
           isSelected
             ? "bg-linear-to-br from-accent to-accent-2 font-extrabold text-accent-contrast shadow-md"
             : isToday
@@ -222,23 +237,28 @@ function DayCell({
         }`}
       >
         {date.getDate()}
-      </span>
-      {/* Evento del pueblo: estrella ámbar (distinta de las barras de reservas). */}
-      <span aria-hidden="true" className="h-4 text-center text-sm leading-4 text-amber-600">
-        {events.length > 0 ? "★" : ""}
+        {/* Evento del pueblo: estrella rosada pegada al número (distinta de las reservas). */}
+        {events.length > 0 && (
+          <span
+            aria-hidden="true"
+            className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-rose-700 text-[0.6rem] leading-none text-white"
+          >
+            ★
+          </span>
+        )}
       </span>
       {/* Barras de reserva: continuas de un día a otro, redondeadas al empezar y acabar. */}
-      <span className="mt-1 flex flex-col gap-0.5" aria-hidden="true">
+      <span className="mt-1 flex flex-col gap-[3px]" aria-hidden="true">
         {byLane.map((s, lane) =>
           s ? (
             <span
               key={s.id}
-              className={`h-2 ${memberColor(members, s.memberId).solid} ${
+              className={`h-1.5 ${memberColor(members, s.memberId).solid} ${
                 s.start === key ? "ml-1 rounded-l-full" : ""
               } ${s.end === key ? "mr-1 rounded-r-full" : ""}`}
             />
           ) : (
-            <span key={lane} className="h-2" />
+            <span key={lane} className="h-1.5" />
           ),
         )}
       </span>
