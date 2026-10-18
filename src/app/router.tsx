@@ -58,17 +58,21 @@ export const router = createBrowserRouter([
       },
       {
         path: "gastos",
-        lazy: async () => {
-          const { ComingSoonPage } = await import("@/pages/ComingSoonPage");
-          return {
-            Component: () => (
-              <ComingSoonPage
-                title="Gastos"
-                text="Muy pronto podréis apuntar los gastos de la casa y ver quién debe a quién."
-              />
-            ),
-          };
-        },
+        lazy: async () => ({
+          Component: (await import("@/features/expenses/ExpensesPage")).ExpensesPage,
+        }),
+      },
+      {
+        path: "gastos/nuevo",
+        lazy: async () => ({
+          Component: (await import("@/features/expenses/ExpenseFormPage")).ExpenseFormPage,
+        }),
+      },
+      {
+        path: "gastos/:id",
+        lazy: async () => ({
+          Component: (await import("@/features/expenses/ExpenseFormPage")).ExpenseFormPage,
+        }),
       },
       {
         path: "mas",

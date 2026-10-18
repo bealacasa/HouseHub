@@ -10,6 +10,9 @@ import { staysOn, toKey, useStays } from "@/features/calendar/stays";
 import { useHouse } from "@/features/house/HouseGate";
 import { useHousePhotoUrl } from "@/features/house/photo";
 import { useNotes } from "@/features/notes/notes";
+import { MyBalance } from "@/features/expenses/ExpensesPage";
+import { useLedger } from "@/features/expenses/expenses";
+import { balances } from "@/features/expenses/money";
 import { InstallCard } from "@/pwa/InstallCard";
 
 /** Inicio. En las próximas fases: «Llego / Me voy», avisos y saldo. */
@@ -60,6 +63,7 @@ export function HomePage() {
         )}
         <WhoIsGoing />
         <PendingNotes />
+        <BalanceLink />
         {house.notes && (
           <Card>
             <h2 className="text-2xl font-bold">📝 Notas de la casa</h2>
@@ -153,5 +157,23 @@ function PendingNotes() {
         {pending.length > 0 ? "Ver y tachar" : "Añadir una nota"}
       </Link>
     </Card>
+  );
+}
+
+/** Tu saldo de gastos («Debes 20 €» / «Te deben 35 €»), con enlace a Gastos. */
+function BalanceLink() {
+  const { members, me } = useHouse();
+  const ledger = useLedger();
+  if (!ledger.isSuccess || ledger.data.expenses.length === 0) return null;
+  const mine =
+    balances(
+      members.map((m) => m.id),
+      ledger.data.expenses,
+      ledger.data.settlements,
+    ).get(me.id) ?? 0;
+  return (
+    <Link to="/gastos" className="block rounded-3xl active:scale-[0.99]">
+      <MyBalance cents={mine} />
+    </Link>
   );
 }

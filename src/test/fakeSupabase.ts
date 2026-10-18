@@ -55,6 +55,8 @@ export function installFakeSupabase(
     house_notes: [],
     village_events: [],
     guides: [],
+    expenses: [],
+    settlements: [],
   };
   const uid = () => crypto.randomUUID();
   const ok = (data: unknown) => ({ data, error: null });
@@ -142,6 +144,26 @@ export function installFakeSupabase(
         revoked_at: null,
       });
       return ok("A".repeat(43));
+    }
+    if (fn === "save_expense") {
+      const id = (args.p_id as string | null) ?? uid();
+      tables.expenses = tables.expenses!.filter((e) => e.id !== id);
+      tables.expenses.push({
+        id,
+        concept: args.p_concept,
+        category: args.p_category,
+        amount_cents: args.p_amount,
+        date: args.p_date,
+        paid_by: args.p_paid_by,
+        split_mode: args.p_split,
+        note: args.p_note,
+        created_by: user.id,
+        expense_shares: (args.p_shares as { member: string; cents: number }[]).map((s) => ({
+          member_id: s.member,
+          cents: s.cents,
+        })),
+      });
+      return ok(id);
     }
     throw new Error(`rpc no simulada: ${fn}`);
   });
