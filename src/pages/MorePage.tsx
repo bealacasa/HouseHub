@@ -1,11 +1,17 @@
 import { Link } from "react-router";
+import { HomeIcon, LockIcon, UserIcon, UsersIcon } from "@/components/icons";
 import { PageTitle, cardShadow } from "@/components/ui";
 
 const ITEMS = [
-  { to: "/casa", emoji: "🏡", label: "La casa", hint: "Nombre, dirección, foto y notas" },
-  { to: "/familia", emoji: "👨‍👩‍👧", label: "La familia", hint: "Quién está e invitar a alguien" },
-  { to: "/ajustes", emoji: "🙂", label: "Mi cuenta", hint: "Tu foto, nombre, cara o huella" },
-  { to: "/privacidad", emoji: "🔒", label: "Privacidad", hint: "Qué datos guardamos y para qué" },
+  { to: "/casa", Icon: HomeIcon, label: "La casa", hint: "Nombre, dirección, foto y notas" },
+  { to: "/familia", Icon: UsersIcon, label: "La familia", hint: "Quién está e invitar a alguien" },
+  { to: "/ajustes", Icon: UserIcon, label: "Mi cuenta", hint: "Tu foto, nombre, cara o huella" },
+  {
+    to: "/privacidad",
+    Icon: LockIcon,
+    label: "Privacidad",
+    hint: "Qué datos guardamos y para qué",
+  },
 ] as const;
 
 /** «Más»: una lista de botones grandes con su nombre (nada escondido en menús). */
@@ -22,9 +28,9 @@ export function MorePage() {
             >
               <span
                 aria-hidden="true"
-                className="grid size-14 shrink-0 place-items-center rounded-2xl bg-accent-soft text-3xl"
+                className="grid size-14 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent"
               >
-                {item.emoji}
+                <item.Icon />
               </span>
               <span className="flex-1">
                 <span className="block text-xl font-bold">{item.label}</span>
