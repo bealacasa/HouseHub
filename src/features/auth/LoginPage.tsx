@@ -13,6 +13,13 @@ export function LoginPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [hasInvite] = useState(() => {
+    try {
+      return localStorage.getItem("househub:invite") !== null;
+    } catch {
+      return false;
+    }
+  });
   const navigate = useNavigate();
   const { session } = useSession();
   // Al entrar (código o huella), al inicio. Si ya había sesión, directamente.
@@ -34,8 +41,13 @@ export function LoginPage() {
       <div className="mb-8 text-center">
         <img src="/favicon.svg" alt="" className="mx-auto size-20 rounded-3xl" />
         <h1 className="mt-4 text-4xl font-extrabold">House Hub</h1>
-        <p className="mt-2 text-xl text-muted">Las casas de la familia, en tu móvil.</p>
+        <p className="mt-2 text-xl text-muted">La casa de la familia, en tu móvil.</p>
       </div>
+      {hasInvite && (
+        <p role="status" className="mb-6 rounded-2xl bg-accent-soft p-4 text-xl font-semibold">
+          🎉 Te han invitado a la casa. Entra con tu correo y quedará aceptada.
+        </p>
+      )}
 
       {step === "email" ? (
         <form

@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router";
 import { RequireAuth } from "@/features/auth/RequireAuth";
+import { HouseGate } from "@/features/house/HouseGate";
 import { HomePage } from "@/pages/HomePage";
 import { Layout } from "./Layout";
 
@@ -23,9 +24,16 @@ export const router = createBrowserRouter([
     lazy: async () => ({ Component: (await import("@/pages/PrivacyPage")).PrivacyPage }),
   },
   {
+    // Enlace de invitación (WhatsApp): guarda el token y lleva a entrar.
+    path: "/invitacion",
+    lazy: async () => ({ Component: (await import("@/features/house/InvitePage")).InvitePage }),
+  },
+  {
     element: (
       <RequireAuth>
-        <Layout />
+        <HouseGate>
+          <Layout />
+        </HouseGate>
       </RequireAuth>
     ),
     children: [
@@ -61,6 +69,18 @@ export const router = createBrowserRouter([
       {
         path: "mas",
         lazy: async () => ({ Component: (await import("@/pages/MorePage")).MorePage }),
+      },
+      {
+        path: "casa",
+        lazy: async () => ({
+          Component: (await import("@/features/house/HouseSettingsPage")).HouseSettingsPage,
+        }),
+      },
+      {
+        path: "familia",
+        lazy: async () => ({
+          Component: (await import("@/features/house/FamilyPage")).FamilyPage,
+        }),
       },
       {
         path: "ajustes",

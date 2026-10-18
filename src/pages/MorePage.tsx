@@ -2,6 +2,8 @@ import { Link } from "react-router";
 import { PageTitle } from "@/components/ui";
 
 const ITEMS = [
+  { to: "/casa", label: "La casa", hint: "Nombre, dirección, foto y notas" },
+  { to: "/familia", label: "La familia", hint: "Quién está e invitar a alguien" },
   { to: "/ajustes", label: "Mi cuenta y ajustes", hint: "Tu nombre, cara o huella, cerrar sesión" },
   { to: "/privacidad", label: "Privacidad", hint: "Qué datos guardamos y para qué" },
 ] as const;

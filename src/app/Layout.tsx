@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router";
 import { CalendarIcon, EuroIcon, HomeIcon, MoreIcon } from "@/components/icons";
+import { useHouse } from "@/features/house/HouseGate";
 import { UpdatePrompt } from "@/pwa/UpdatePrompt";
 
 /** Cuatro pestañas, siempre con texto (nunca solo iconos). */
@@ -11,12 +12,19 @@ const TABS = [
 ] as const;
 
 export function Layout() {
+  const { house } = useHouse();
   return (
     <div className="flex min-h-dvh flex-col">
-      {/* El selector de vivienda (fase 2) irá aquí, siempre visible. */}
+      {/* Una sola casa: su nombre, siempre visible arriba. */}
+      <header className="border-b-2 border-border bg-surface px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+        <p className="mx-auto max-w-xl truncate text-xl font-bold">
+          <span aria-hidden="true">🏡 </span>
+          {house.name}
+        </p>
+      </header>
       <main
         id="contenido"
-        className="mx-auto w-full max-w-xl flex-1 px-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-[calc(1.25rem+env(safe-area-inset-top))]"
+        className="mx-auto w-full max-w-xl flex-1 px-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-5"
       >
         <Outlet />
       </main>

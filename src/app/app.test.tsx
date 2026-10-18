@@ -38,12 +38,12 @@ describe("acceso a la app", () => {
     // Entra solo (sin navegar a mano) y el inicio pide el nombre la primera vez.
     await user.type(await screen.findByLabelText("¿Cómo te llamas?"), "Abuela Carmen");
     await user.click(screen.getByRole("button", { name: "Continuar" }));
-    await screen.findByText(/Entra más fácil|Hola, Abuela Carmen/);
+    await screen.findByText(/Entra más fácil|Vamos a crear la casa/);
     expect(fake.profiles.get(fake.user.id)?.display_name).toBe("Abuela Carmen");
   });
 
   it("con sesión y nombre, muestra el inicio y las 4 pestañas con texto", async () => {
-    installFakeSupabase({ signedIn: true, name: "Ana" });
+    installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa del pueblo" });
     localStorage.setItem("househub:passkey-asked", "1");
     renderAt("/");
     expect(await screen.findByRole("heading", { name: "Hola, Ana" })).toBeTruthy();
@@ -57,7 +57,7 @@ describe("acceso a la app", () => {
   });
 
   it("cerrar sesión en todos los dispositivos pide confirmación", async () => {
-    const fake = installFakeSupabase({ signedIn: true, name: "Ana" });
+    const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa del pueblo" });
     localStorage.setItem("househub:passkey-asked", "1");
     const user = userEvent.setup();
     renderAt("/ajustes");
