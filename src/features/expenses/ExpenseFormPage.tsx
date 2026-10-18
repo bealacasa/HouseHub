@@ -1,3 +1,4 @@
+import { addMonths, parseISO } from "date-fns";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Avatar } from "@/components/Avatar";
@@ -10,13 +11,14 @@ import {
   buttonPrimary,
   inputClass,
 } from "@/components/ui";
-import { DateField, FormSection, PrivacyHint, fieldLabel } from "@/components/form";
+import { DateField, FormSection, PrivacyHint, fieldLabel, shortDay } from "@/components/form";
 import { toKey } from "@/features/calendar/stays";
 import { MemberPicker } from "@/features/house/MemberPicker";
 import { useHouse } from "@/features/house/HouseGate";
 import { errorMessage } from "@/features/house/house";
 import {
   CATEGORIES,
+  REPEAT_OPTIONS,
   expenseInputSchema,
   useDeleteExpense,
   useLedger,
@@ -42,13 +44,16 @@ export function ExpenseFormPage() {
       </>
     );
   }
-  return <ExpenseForm key={id ?? "nuevo"} expense={expense} />;
+  const repeat = expense?.recurringId
+    ? (ledger.data?.recurring.find((r) => r.id === expense.recurringId)?.everyMonths ?? 0)
+    : 0;
+  return <ExpenseForm key={id ?? "nuevo"} expense={expense} initialRepeat={repeat} />;
 }
 
 /** Céntimos → texto para el campo ("12,50"). */
 const centsToInput = (c: number) => (c / 100).toFixed(2).replace(".", ",");
 
-function ExpenseForm({ expense }: { expense?: Expense }) {
+function ExpenseForm({ expense, initialRepeat }: { expense?: Expense; initialRepeat: number }) {
   const { members, me, isAdmin } = useHouse();
   const navigate = useNavigate();
   const [dialog, confirm] = useConfirm();
@@ -72,6 +77,7 @@ function ExpenseForm({ expense }: { expense?: Expense }) {
     ),
   );
   const [note, setNote] = useState(expense?.note ?? "");
+  const [repeat, setRepeat] = useState(initialRepeat);
   const [error, setError] = useState<string | null>(null);
   const save = useSaveExpense();
   const remove = useDeleteExpense();
@@ -114,7 +120,12 @@ function ExpenseForm({ expense }: { expense?: Expense }) {
     }
     setError(null);
     save.mutate(
-      { id: expense?.id, input },
+      {
+        id: expense?.id,
+        input,
+        // Solo se toca la repetición si se repite o si ya se repetía (para quitarla).
+        repeat: repeat > 0 || expense?.recurringId ? repeat : undefined,
+      },
       { onSuccess: () => navigate("/gastos", { replace: true }) },
     );
   }
@@ -194,6 +205,39 @@ function ExpenseForm({ expense }: { expense?: Expense }) {
               </div>
             </fieldset>
             <DateField id="ex-date" label="Fecha" value={date} onChange={setDate} />
+          </FormSection>
+
+          <FormSection
+            title="¿Se repite?"
+            hint="Para recibos fijos, como internet o la comunidad."
+            as="fieldset"
+          >
+            <div className="grid grid-cols-2 gap-2">
+              {REPEAT_OPTIONS.map((o) => (
+                <label
+                  key={o.months}
+                  className="flex min-h-14 cursor-pointer items-center justify-center rounded-2xl border-2 border-border bg-surface px-2 text-center text-lg font-semibold has-checked:border-accent has-checked:bg-accent-soft has-checked:text-accent has-focus-visible:ring-3 has-focus-visible:ring-focus"
+                >
+                  <input
+                    type="radio"
+                    name="ex-repeat"
+                    checked={repeat === o.months}
+                    onChange={() => setRepeat(o.months)}
+                    className="sr-only"
+                  />
+                  {o.label}
+                </label>
+              ))}
+            </div>
+            {repeat > 0 && /^\d{4}-\d{2}-\d{2}$/.test(date) && (
+              <p aria-live="polite" className="rounded-2xl bg-accent-soft px-4 py-3 text-lg">
+                Se apuntará solo, con el mismo importe y reparto. El próximo:{" "}
+                <strong className="first-letter:uppercase">
+                  {shortDay(toKey(addMonths(parseISO(date), repeat)))}
+                </strong>
+                .
+              </p>
+            )}
           </FormSection>
 
           <FormSection title="¿Quién lo pagó?" as="fieldset">

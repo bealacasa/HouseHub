@@ -26,7 +26,9 @@ export function FormSection({
       {(title || hint) && (
         <div className={as === "fieldset" ? "contents" : ""}>
           {title && <Heading className="text-xl font-bold">{title}</Heading>}
-          {hint && <p className="-mt-2 text-base text-muted">{hint}</p>}
+          {hint && (
+            <p className={`${as === "fieldset" ? "mt-1" : "-mt-2"} text-base text-muted`}>{hint}</p>
+          )}
         </div>
       )}
       {children}

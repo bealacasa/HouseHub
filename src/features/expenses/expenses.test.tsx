@@ -57,6 +57,34 @@ describe("gastos", () => {
     expect(await screen.findByText(/Te deben 6,6\d/)).toBeTruthy();
   });
 
+  it("un gasto que se repite cada mes queda como gasto fijo y se puede dejar de repetir", async () => {
+    const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    const user = userEvent.setup();
+    const memory = renderAt("/gastos/nuevo");
+    await user.type(await screen.findByLabelText("¿Cuánto ha costado?"), "35");
+    await user.type(screen.getByLabelText("¿Qué es?"), "Fibra");
+    await user.click(screen.getByLabelText(/Internet$/));
+    await user.click(screen.getByLabelText(/Cada mes$/));
+    expect(screen.getByText(/Se apuntará solo/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Apuntar gasto" }));
+
+    await vi.waitFor(() => expect(memory.state.location.pathname).toBe("/gastos"), {
+      timeout: 5000,
+    });
+    expect(fake.tables.recurring_expenses![0]).toMatchObject({
+      concept: "Fibra",
+      amount_cents: 3500,
+      every_months: 1,
+    });
+    expect(fake.rpc).toHaveBeenCalledWith("run_recurring");
+    expect(await screen.findByRole("heading", { name: "Gastos fijos" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Dejar de repetir" }));
+    await user.click(await screen.findByRole("button", { name: "Sí, dejar de repetir" }));
+    await vi.waitFor(() => expect(fake.tables.recurring_expenses).toHaveLength(0));
+    // El gasto ya apuntado se queda.
+    expect(fake.tables.expenses).toHaveLength(1);
+  });
+
   it("con cantidades a mano avisa si no suman el total y no guarda", async () => {
     const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
     const user = userEvent.setup();

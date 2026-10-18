@@ -5,16 +5,25 @@ import { Link } from "react-router";
 import { Avatar } from "@/components/Avatar";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Card, ErrorMessage, PageTitle, buttonPrimary, cardShadow } from "@/components/ui";
+import { shortDay } from "@/components/form";
 import { useHouse } from "@/features/house/HouseGate";
 import { errorMessage, type Member } from "@/features/house/house";
-import { CATEGORIES, useLedger, useSettle, type Expense } from "./expenses";
+import {
+  CATEGORIES,
+  repeatLabel,
+  useLedger,
+  useSettle,
+  useStopRecurring,
+  type Expense,
+  type Recurring,
+} from "./expenses";
 import { balances, formatEuros, settleUp, type Transfer } from "./money";
 
 /** Gastos compartidos: tu saldo, cómo quedar en paz, saldo de cada uno y los gastos. */
 export function ExpensesPage() {
   const { members, me } = useHouse();
   const ledger = useLedger();
-  const data = ledger.data ?? { expenses: [], settlements: [] };
+  const data = ledger.data ?? { expenses: [], settlements: [], recurring: [] };
   const balance = balances(
     members.map((m) => m.id),
     data.expenses,
@@ -37,6 +46,7 @@ export function ExpensesPage() {
           <MyBalance cents={balance.get(me.id) ?? 0} />
           <SettleCard transfers={transfers} members={members} />
           <BalancesCard balance={balance} members={members} />
+          <RecurringCard recurring={data.recurring} expenses={data.expenses} members={members} />
           <ExpenseList expenses={data.expenses} members={members} />
         </div>
       )}
@@ -155,6 +165,94 @@ function BalancesCard({
   );
 }
 
+/** Gastos fijos (internet cada mes…): cuándo toca el próximo y botón para dejar de repetir. */
+function RecurringCard({
+  recurring,
+  expenses,
+  members,
+}: {
+  recurring: Recurring[];
+  expenses: Expense[];
+  members: readonly Member[];
+}) {
+  const { me, isAdmin } = useHouse();
+  const stop = useStopRecurring();
+  const [dialog, confirm] = useConfirm();
+  if (recurring.length === 0) return null;
+
+  async function onStop(r: Recurring) {
+    const ok = await confirm({
+      title: "¿Dejar de repetir este gasto?",
+      message: `«${r.concept}» ya no se apuntará solo. Los gastos ya apuntados se quedan.`,
+      confirmLabel: "Sí, dejar de repetir",
+    });
+    if (ok) stop.mutate(r.id);
+  }
+
+  return (
+    <Card>
+      <h2 className="text-2xl font-bold">Gastos fijos</h2>
+      <p className="mt-1 text-lg text-muted">Se apuntan solos cuando toca.</p>
+      <ul className="mt-3 divide-y divide-border">
+        {recurring.map((r) => {
+          const payer = members.find((m) => m.id === r.paidBy)?.displayName ?? "Alguien";
+          // Para cambiar el importe se edita el último recibo de la serie.
+          const last = expenses.find((e) => e.recurringId === r.id);
+          const canStop = isAdmin || r.createdBy === me.userId;
+          return (
+            <li key={r.id} className="py-3">
+              <div className="flex items-center gap-3">
+                <span
+                  aria-hidden="true"
+                  className="grid size-12 shrink-0 place-items-center rounded-2xl bg-accent-soft text-2xl"
+                >
+                  {CATEGORIES[r.category].emoji}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xl font-bold">{r.concept}</span>
+                  <span className="block text-base text-muted">
+                    🔁 {repeatLabel(r.everyMonths)} · paga {payer}
+                  </span>
+                </span>
+                <span className="text-xl font-extrabold tabular-nums">{formatEuros(r.amount)}</span>
+              </div>
+              <p className="mt-2 text-lg">
+                Próximo: <strong className="first-letter:uppercase">{shortDay(r.nextDate)}</strong>
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {last && (
+                  <Link
+                    to={`/gastos/${last.id}`}
+                    className="grid min-h-12 place-items-center rounded-xl border-2 border-accent bg-surface text-lg font-bold text-accent"
+                  >
+                    Cambiar
+                  </Link>
+                )}
+                {canStop && (
+                  <button
+                    type="button"
+                    disabled={stop.isPending}
+                    onClick={() => void onStop(r)}
+                    className="min-h-12 rounded-xl border-2 border-border bg-surface text-lg font-bold text-danger"
+                  >
+                    Dejar de repetir
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {stop.isError && (
+        <div className="mt-3">
+          <ErrorMessage>{errorMessage(stop.error)}</ErrorMessage>
+        </div>
+      )}
+      {dialog}
+    </Card>
+  );
+}
+
 function ExpenseList({ expenses, members }: { expenses: Expense[]; members: readonly Member[] }) {
   const [all, setAll] = useState(false);
   const shown = all ? expenses : expenses.slice(0, 15);
@@ -206,6 +304,7 @@ function ExpenseCard({ expense, members }: { expense: Expense; members: readonly
       <span className="min-w-0 flex-1">
         <span className="block truncate text-xl font-bold">{expense.concept}</span>
         <span className="block text-base text-muted">
+          {expense.recurringId && <span aria-label="Gasto fijo">🔁 </span>}
           Pagó {payer} · {format(parseISO(expense.date), "d MMM", { locale: es })} · {cat.label}
         </span>
       </span>

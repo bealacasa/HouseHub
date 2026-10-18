@@ -57,6 +57,7 @@ export function installFakeSupabase(
     guides: [],
     expenses: [],
     settlements: [],
+    recurring_expenses: [],
   };
   const uid = () => crypto.randomUUID();
   const ok = (data: unknown) => ({ data, error: null });
@@ -164,6 +165,30 @@ export function installFakeSupabase(
         })),
       });
       return ok(id);
+    }
+    if (fn === "run_recurring") return ok(0);
+    if (fn === "set_expense_repeat") {
+      const expense = tables.expenses!.find((e) => e.id === args.p_expense);
+      if (!expense)
+        return { data: null, error: { code: "P0001", message: "Ese gasto no existe." } };
+      const id = (expense.recurring_id as string | undefined) ?? uid();
+      tables.recurring_expenses = tables.recurring_expenses!.filter((r) => r.id !== id);
+      if (args.p_every === 0) {
+        expense.recurring_id = null;
+        return ok(null);
+      }
+      expense.recurring_id = id;
+      tables.recurring_expenses.push({
+        id,
+        concept: expense.concept,
+        category: expense.category,
+        amount_cents: expense.amount_cents,
+        paid_by: expense.paid_by,
+        every_months: args.p_every,
+        next_date: "2026-11-01",
+        created_by: user.id,
+      });
+      return ok(null);
     }
     throw new Error(`rpc no simulada: ${fn}`);
   });
