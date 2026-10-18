@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { Avatar } from "@/components/Avatar";
 import {
   ErrorMessage,
   PageTitle,
@@ -10,8 +9,10 @@ import {
   buttonPrimary,
   inputClass,
 } from "@/components/ui";
+import { DateField, FormSection, PrivacyHint, Stepper, fieldLabel } from "@/components/form";
+import { MemberPicker } from "@/features/house/MemberPicker";
 import { useHouse } from "@/features/house/HouseGate";
-import { NOTES_WARNING, errorMessage } from "@/features/house/house";
+import { errorMessage } from "@/features/house/house";
 import {
   nightsLabel,
   overlapping,
@@ -103,134 +104,72 @@ function StayForm({ stay, all }: { stay?: Stay; all: Stay[] }) {
       </Link>
       <PageTitle title={stay ? "La reserva" : "Reservar unos días"} />
       <form noValidate onSubmit={(e) => void onSubmit(e)} className="space-y-5">
-        <fieldset disabled={!canEdit} className="space-y-5">
+        <fieldset disabled={!canEdit} className="space-y-4">
           {/* Elegir tocando la foto: más fácil que un desplegable. */}
-          <fieldset>
-            <legend className="mb-3 text-xl font-semibold">¿Quién va?</legend>
-            <div className="grid grid-cols-3 gap-2">
-              {members.map((m) => (
-                <label
-                  key={m.id}
-                  className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border-2 border-transparent bg-surface p-2 text-center shadow-sm has-checked:border-accent has-checked:bg-accent-soft has-focus-visible:ring-3 has-focus-visible:ring-focus"
-                >
-                  <input
-                    type="radio"
-                    name="stay-who"
-                    value={m.id}
-                    checked={memberId === m.id}
-                    onChange={() => setMemberId(m.id)}
-                    className="sr-only"
-                  />
-                  <Avatar member={m} members={members} />
-                  <span className="text-base font-bold leading-tight">
-                    {m.id === me.id ? "Yo" : m.displayName}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="stay-start" className="mb-2 block text-xl font-semibold">
-                Llega
-              </label>
-              <input
+          <FormSection title="¿Quién va?" as="fieldset">
+            <MemberPicker name="stay-who" value={memberId} onChange={setMemberId} />
+          </FormSection>
+
+          <FormSection title="¿Qué días?">
+            <div className="grid gap-3">
+              <DateField
                 id="stay-start"
-                type="date"
+                label="Llega"
                 value={start}
-                onChange={(e) => {
-                  setStart(e.target.value);
-                  if (end < e.target.value) setEnd(e.target.value);
+                onChange={(v) => {
+                  setStart(v);
+                  if (end < v) setEnd(v);
                 }}
-                className={inputClass}
               />
+              <DateField id="stay-end" label="Se va" value={end} min={start} onChange={setEnd} />
             </div>
-            <div>
-              <label htmlFor="stay-end" className="mb-2 block text-xl font-semibold">
-                Se va
-              </label>
-              <input
-                id="stay-end"
-                type="date"
-                min={start}
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-          </div>
-          {start && end && end >= start && (
-            <p
-              aria-live="polite"
-              className="-mt-2 rounded-2xl bg-accent-soft px-4 py-3 text-lg font-semibold"
-            >
-              📅 {periodLabel({ start, end })} · {nightsLabel({ start, end })}
-            </p>
-          )}
-          <div>
-            <p id="stay-people-label" className="mb-2 text-xl font-semibold">
-              ¿Cuántas personas?
-            </p>
-            <div
-              className="flex items-center gap-3"
-              role="group"
-              aria-labelledby="stay-people-label"
-            >
-              <button
-                type="button"
-                onClick={() => setPeople((p) => Math.max(1, p - 1))}
-                aria-label="Una persona menos"
-                className="grid size-14 place-items-center rounded-2xl border-2 border-border text-3xl font-bold"
-              >
-                −
-              </button>
-              <span
-                className="min-w-12 text-center text-3xl font-bold tabular-nums"
+            {start && end && end >= start && (
+              <p
                 aria-live="polite"
+                className="rounded-2xl bg-accent-soft px-4 py-3 text-lg font-semibold"
               >
-                {people}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPeople((p) => Math.min(50, p + 1))}
-                aria-label="Una persona más"
-                className="grid size-14 place-items-center rounded-2xl border-2 border-border text-3xl font-bold"
+                {periodLabel({ start, end })} · {nightsLabel({ start, end })}
+              </p>
+            )}
+            {clashes.length > 0 && (
+              <p
+                role="status"
+                className="rounded-2xl bg-warning-bg px-4 py-3 text-lg font-semibold text-warning-text"
               >
-                +
-              </button>
-            </div>
-          </div>
-          <div>
-            <label htmlFor="stay-note" className="mb-2 block text-xl font-semibold">
-              Nota (opcional)
-            </label>
-            <p id="stay-note-hint" className="mb-2 text-muted">
-              Por ejemplo: «vamos con los niños». {NOTES_WARNING}
-            </p>
-            <textarea
-              id="stay-note"
-              rows={3}
-              maxLength={500}
-              aria-describedby="stay-note-hint"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className={`${inputClass} py-3`}
+                ⚠️ Esos días ya va {clashes.map((c) => nameOf(c.memberId)).join(", ")}. Puedes
+                reservar igualmente.
+              </p>
+            )}
+          </FormSection>
+
+          <FormSection>
+            <Stepper
+              label="¿Cuántas personas?"
+              value={people}
+              onChange={setPeople}
+              min={1}
+              max={50}
+              unit={(n) => (n === 1 ? "persona" : "personas")}
             />
-          </div>
+            <div>
+              <label htmlFor="stay-note" className={fieldLabel}>
+                Nota <span className="font-normal text-muted">(opcional)</span>
+              </label>
+              <textarea
+                id="stay-note"
+                rows={2}
+                maxLength={500}
+                placeholder="Por ejemplo: vamos con los niños"
+                aria-describedby="stay-note-hint"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className={`${inputClass} py-3`}
+              />
+              <PrivacyHint id="stay-note-hint" />
+            </div>
+          </FormSection>
         </fieldset>
 
-        {clashes.length > 0 && (
-          <p
-            role="status"
-            className="rounded-2xl bg-warning-bg p-4 text-lg font-semibold text-warning-text"
-          >
-            ⚠️ Esos días ya va:{" "}
-            {clashes
-              .map((c) => `${nameOf(c.memberId)} (${periodLabel(c).toLowerCase()})`)
-              .join(", ")}
-            . Puedes reservar igualmente.
-          </p>
-        )}
         {(error || save.error || remove.error) && (
           <ErrorMessage>{error ?? errorMessage(save.error ?? remove.error)}</ErrorMessage>
         )}

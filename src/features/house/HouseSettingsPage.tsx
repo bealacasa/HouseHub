@@ -11,7 +11,8 @@ import {
   inputClass,
 } from "@/components/ui";
 import { ImageError } from "@/lib/image";
-import { NOTES_WARNING, errorMessage, useUpdateHouse } from "./house";
+import { PrivacyHint } from "@/components/form";
+import { errorMessage, useUpdateHouse } from "./house";
 import { useHouse } from "./HouseGate";
 import { useHousePhotoUrl, useSetHousePhoto } from "./photo";
 
@@ -142,9 +143,6 @@ function HouseForm() {
           />
         </Field>
         <Field id="h-notes" label="Notas para la familia (opcional)">
-          <p id="h-notes-hint" className="mb-2 rounded-xl bg-warning-bg p-3 text-warning-text">
-            ⚠️ {NOTES_WARNING}
-          </p>
           <textarea
             id="h-notes"
             rows={5}
@@ -154,6 +152,7 @@ function HouseForm() {
             onChange={(e) => setNotes(e.target.value)}
             className={`${inputClass} py-3`}
           />
+          <PrivacyHint id="h-notes-hint" />
         </Field>
         <Field id="h-thermo" label="Enlace a la app del termostato (opcional)">
           <input

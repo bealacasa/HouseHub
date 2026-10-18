@@ -13,7 +13,7 @@
   --muted: #434956;
   --border: #dde1e7;
   /* Bordes de campos y botones: contraste >= 3:1 con el fondo. */
-  --field: #6b7280;
+  --field: #8a93a3;
   --accent: #1d4ed8;
   --accent-contrast: #ffffff;
   --accent-soft: #dbeafe;
@@ -35,7 +35,7 @@
     --text: #f7f7f5;
     --muted: #d6d6d0;
     --border: #2e333d;
-    --field: #8a93a3;
+    --field: #6b7689;
     --accent: #60a5fa;
     --accent-contrast: #0b1a33;
     --accent-soft: #172554;

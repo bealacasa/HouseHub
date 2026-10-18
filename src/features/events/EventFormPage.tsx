@@ -10,6 +10,7 @@ import {
   buttonPrimary,
   inputClass,
 } from "@/components/ui";
+import { DateField } from "@/components/form";
 import { periodLabel, toKey } from "@/features/calendar/stays";
 import { useHouse } from "@/features/house/HouseGate";
 import { errorMessage } from "@/features/house/house";
@@ -117,35 +118,17 @@ function EventForm({ event }: { event?: VillageEvent }) {
 
           <Card>
             <p className={label}>¿Cuándo?</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="ev-start" className="mb-1 block text-lg text-muted">
-                  Empieza
-                </label>
-                <input
-                  id="ev-start"
-                  type="date"
-                  value={start}
-                  onChange={(e) => {
-                    setStart(e.target.value);
-                    if (end < e.target.value) setEnd(e.target.value);
-                  }}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label htmlFor="ev-end" className="mb-1 block text-lg text-muted">
-                  Termina
-                </label>
-                <input
-                  id="ev-end"
-                  type="date"
-                  min={start}
-                  value={end}
-                  onChange={(e) => setEnd(e.target.value)}
-                  className={inputClass}
-                />
-              </div>
+            <div className="grid gap-3">
+              <DateField
+                id="ev-start"
+                label="Empieza"
+                value={start}
+                onChange={(v) => {
+                  setStart(v);
+                  if (end < v) setEnd(v);
+                }}
+              />
+              <DateField id="ev-end" label="Termina" value={end} min={start} onChange={setEnd} />
             </div>
             {validRange && (
               <p

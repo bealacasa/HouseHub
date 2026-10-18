@@ -37,7 +37,7 @@ describe("calendario", () => {
     renderAt(`/calendario/nueva?dia=${day}`);
 
     expect(await screen.findByText(/Esos días ya va/)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Una persona más" }));
+    await user.click(screen.getByRole("button", { name: /Añadir uno/ }));
     await user.click(screen.getByRole("button", { name: "Reservar" }));
     await user.click(await screen.findByRole("button", { name: "Sí, reservar igualmente" }));
     expect(await screen.findByRole("heading", { name: "Calendario", level: 1 })).toBeTruthy();

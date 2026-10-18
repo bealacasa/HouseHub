@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from "react-router";
 import { Avatar } from "@/components/Avatar";
 import { useConfirm } from "@/components/ConfirmDialog";
 import {
-  Card,
   ErrorMessage,
   PageTitle,
   backLink,
@@ -11,7 +10,9 @@ import {
   buttonPrimary,
   inputClass,
 } from "@/components/ui";
+import { DateField, FormSection, PrivacyHint, fieldLabel } from "@/components/form";
 import { toKey } from "@/features/calendar/stays";
+import { MemberPicker } from "@/features/house/MemberPicker";
 import { useHouse } from "@/features/house/HouseGate";
 import { errorMessage } from "@/features/house/house";
 import {
@@ -128,21 +129,20 @@ function ExpenseForm({ expense }: { expense?: Expense }) {
     if (ok) remove.mutate(expense.id, { onSuccess: () => navigate("/gastos", { replace: true }) });
   }
 
-  const label = "mb-2 block text-xl font-semibold";
-
   return (
     <>
       <Link to="/gastos" className={backLink}>
         ← Gastos
       </Link>
       <PageTitle title={expense ? "El gasto" : "Apuntar un gasto"} />
-      <form noValidate onSubmit={onSubmit} className="space-y-6">
-        <fieldset disabled={!canEdit} className="space-y-6">
-          <div>
-            <label htmlFor="ex-amount" className={label}>
+      <form noValidate onSubmit={onSubmit} className="space-y-5">
+        <fieldset disabled={!canEdit} className="space-y-4">
+          {/* El importe, grande y en el centro: es lo más importante. */}
+          <section className="rounded-[2rem] bg-linear-to-br from-accent to-accent-2 p-5 text-center text-accent-contrast shadow-xl shadow-accent/20">
+            <label htmlFor="ex-amount" className="block text-lg font-semibold opacity-90">
               ¿Cuánto ha costado?
             </label>
-            <div className="relative">
+            <div className="mt-2 flex items-center justify-center gap-2">
               <input
                 id="ex-amount"
                 inputMode="decimal"
@@ -150,97 +150,62 @@ function ExpenseForm({ expense }: { expense?: Expense }) {
                 placeholder="0,00"
                 value={amountText}
                 onChange={(e) => setAmountText(e.target.value)}
-                className={`${inputClass} min-h-18 pr-12 text-right text-4xl font-extrabold tabular-nums`}
+                className="w-full min-w-0 rounded-2xl border-2 border-white/40 bg-white/15 px-3 py-2 text-center text-5xl font-extrabold tabular-nums placeholder:text-current placeholder:opacity-50 focus:border-white"
               />
-              <span
-                aria-hidden="true"
-                className="absolute inset-y-0 right-4 grid place-items-center text-3xl font-bold text-muted"
-              >
+              <span aria-hidden="true" className="text-4xl font-extrabold">
                 €
               </span>
             </div>
-          </div>
+          </section>
 
-          <div>
-            <label htmlFor="ex-concept" className={label}>
-              ¿Qué es?
-            </label>
-            <input
-              id="ex-concept"
-              maxLength={100}
-              placeholder="Por ejemplo: Bombona de butano"
-              value={concept}
-              onChange={(e) => setConcept(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-
-          <fieldset>
-            <legend className={label}>Tipo de gasto</legend>
-            <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(CATEGORIES) as Category[]).map((c) => (
-                <label
-                  key={c}
-                  className="flex min-h-14 cursor-pointer items-center gap-2 rounded-2xl border-2 border-border bg-surface px-3 text-lg font-semibold has-checked:border-accent has-checked:bg-accent-soft has-focus-visible:ring-3 has-focus-visible:ring-focus"
-                >
-                  <input
-                    type="radio"
-                    name="ex-category"
-                    checked={category === c}
-                    onChange={() => setCategory(c)}
-                    className="sr-only"
-                  />
-                  <span aria-hidden="true">{CATEGORIES[c].emoji}</span>
-                  {CATEGORIES[c].label}
-                </label>
-              ))}
+          <FormSection>
+            <div>
+              <label htmlFor="ex-concept" className={fieldLabel}>
+                ¿Qué es?
+              </label>
+              <input
+                id="ex-concept"
+                maxLength={100}
+                placeholder="Por ejemplo: bombona de butano"
+                value={concept}
+                onChange={(e) => setConcept(e.target.value)}
+                className={inputClass}
+              />
             </div>
-          </fieldset>
+            <fieldset>
+              <legend className={fieldLabel}>Tipo</legend>
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(CATEGORIES) as Category[]).map((c) => (
+                  <label
+                    key={c}
+                    className="inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-full border-2 border-border bg-surface px-4 text-lg font-semibold has-checked:border-accent has-checked:bg-accent-soft has-checked:text-accent has-focus-visible:ring-3 has-focus-visible:ring-focus"
+                  >
+                    <input
+                      type="radio"
+                      name="ex-category"
+                      checked={category === c}
+                      onChange={() => setCategory(c)}
+                      className="sr-only"
+                    />
+                    <span aria-hidden="true">{CATEGORIES[c].emoji}</span>
+                    {CATEGORIES[c].label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <DateField id="ex-date" label="Fecha" value={date} onChange={setDate} />
+          </FormSection>
 
-          <div>
-            <label htmlFor="ex-date" className={label}>
-              Fecha
-            </label>
-            <input
-              id="ex-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className={inputClass}
-            />
-          </div>
+          <FormSection title="¿Quién lo pagó?" as="fieldset">
+            <MemberPicker name="ex-paid" value={paidBy} onChange={setPaidBy} />
+          </FormSection>
 
-          <fieldset>
-            <legend className={label}>¿Quién lo pagó?</legend>
-            <div className="grid grid-cols-3 gap-2">
-              {members.map((m) => (
-                <label
-                  key={m.id}
-                  className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border-2 border-transparent bg-surface p-2 text-center shadow-sm has-checked:border-accent has-checked:bg-accent-soft has-focus-visible:ring-3 has-focus-visible:ring-focus"
-                >
-                  <input
-                    type="radio"
-                    name="ex-paid"
-                    checked={paidBy === m.id}
-                    onChange={() => setPaidBy(m.id)}
-                    className="sr-only"
-                  />
-                  <Avatar member={m} members={members} />
-                  <span className="text-base font-bold leading-tight">
-                    {m.id === me.id ? "Yo" : m.displayName}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend className={label}>¿Cómo se reparte?</legend>
+          <FormSection title="¿Cómo se reparte?" as="fieldset">
             <div className="grid grid-cols-2 gap-1 rounded-2xl bg-surface-2 p-1">
               {(["equal", "custom"] as const).map((mode) => (
                 <label
                   key={mode}
-                  className="flex min-h-14 cursor-pointer items-center justify-center rounded-xl text-center text-lg font-bold text-muted has-checked:bg-surface has-checked:text-text has-checked:shadow-sm has-focus-visible:ring-3 has-focus-visible:ring-focus"
+                  className="flex min-h-14 cursor-pointer items-center justify-center rounded-xl px-2 text-center text-lg font-bold leading-tight text-muted has-checked:bg-surface has-checked:text-text has-checked:shadow-sm has-focus-visible:ring-3 has-focus-visible:ring-focus"
                 >
                   <input
                     type="radio"
@@ -253,19 +218,14 @@ function ExpenseForm({ expense }: { expense?: Expense }) {
                 </label>
               ))}
             </div>
-          </fieldset>
 
-          {split === "equal" ? (
-            <Card>
-              <p className="mb-3 text-lg font-semibold">
-                Entre quiénes (toca para quitar o poner):
-              </p>
-              <ul className="space-y-2">
+            {split === "equal" ? (
+              <ul className="divide-y divide-border" aria-label="Entre quiénes">
                 {members.map((m) => {
                   const on = between.includes(m.id);
                   return (
                     <li key={m.id}>
-                      <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl px-2">
+                      <label className="flex min-h-16 cursor-pointer items-center gap-3">
                         <input
                           type="checkbox"
                           checked={on}
@@ -274,9 +234,14 @@ function ExpenseForm({ expense }: { expense?: Expense }) {
                               e.target.checked ? [...list, m.id] : list.filter((x) => x !== m.id),
                             )
                           }
-                          className="size-7 accent-[var(--accent)]"
+                          className="size-7 shrink-0 accent-[var(--accent)]"
                         />
-                        <span className="flex-1 text-lg font-semibold">{m.displayName}</span>
+                        <Avatar member={m} members={members} size="sm" />
+                        <span
+                          className={`flex-1 text-lg font-semibold ${on ? "" : "text-muted line-through"}`}
+                        >
+                          {m.displayName}
+                        </span>
                         <span className="text-lg font-bold tabular-nums">
                           {on && amount ? formatEuros(equalShares.get(m.id) ?? 0) : "—"}
                         </span>
@@ -285,58 +250,62 @@ function ExpenseForm({ expense }: { expense?: Expense }) {
                   );
                 })}
               </ul>
-            </Card>
-          ) : (
-            <Card>
-              <ul className="space-y-3">
-                {members.map((m) => (
-                  <li key={m.id} className="flex items-center gap-3">
-                    <label htmlFor={`ex-share-${m.id}`} className="flex-1 text-lg font-semibold">
-                      {m.displayName}
-                    </label>
-                    <input
-                      id={`ex-share-${m.id}`}
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={custom[m.id] ?? ""}
-                      onChange={(e) => setCustom((c) => ({ ...c, [m.id]: e.target.value }))}
-                      className={`${inputClass} w-36 text-right font-bold tabular-nums`}
-                    />
-                  </li>
-                ))}
-              </ul>
-              {amount !== null && (
-                <p
-                  aria-live="polite"
-                  className={`mt-4 rounded-2xl p-3 text-lg font-semibold ${
-                    left === 0 ? "bg-accent-soft" : "bg-warning-bg text-warning-text"
-                  }`}
-                >
-                  {left === 0
-                    ? "✓ El reparto suma el total."
-                    : left > 0
-                      ? `Faltan ${formatEuros(left)} por repartir.`
-                      : `Te pasas en ${formatEuros(-left)}.`}
-                </p>
-              )}
-            </Card>
-          )}
+            ) : (
+              <>
+                <ul className="space-y-3">
+                  {members.map((m) => (
+                    <li key={m.id} className="flex items-center gap-3">
+                      <Avatar member={m} members={members} size="sm" />
+                      <label htmlFor={`ex-share-${m.id}`} className="flex-1 text-lg font-semibold">
+                        {m.displayName}
+                      </label>
+                      <input
+                        id={`ex-share-${m.id}`}
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={custom[m.id] ?? ""}
+                        onChange={(e) => setCustom((c) => ({ ...c, [m.id]: e.target.value }))}
+                        className={`${inputClass} w-32 text-right font-bold tabular-nums`}
+                      />
+                    </li>
+                  ))}
+                </ul>
+                {amount !== null && (
+                  <p
+                    aria-live="polite"
+                    className={`rounded-2xl px-4 py-3 text-lg font-semibold ${
+                      left === 0 ? "bg-accent-soft" : "bg-warning-bg text-warning-text"
+                    }`}
+                  >
+                    {left === 0
+                      ? "✓ El reparto suma el total."
+                      : left > 0
+                        ? `Faltan ${formatEuros(left)} por repartir.`
+                        : `Te pasas en ${formatEuros(-left)}.`}
+                  </p>
+                )}
+              </>
+            )}
+          </FormSection>
 
-          <div>
-            <label htmlFor="ex-note" className={label}>
-              Nota (opcional)
-            </label>
-            <textarea
-              id="ex-note"
-              rows={2}
-              maxLength={300}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className={`${inputClass} py-3`}
-            />
-          </div>
+          <FormSection>
+            <div>
+              <label htmlFor="ex-note" className={fieldLabel}>
+                Nota <span className="font-normal text-muted">(opcional)</span>
+              </label>
+              <textarea
+                id="ex-note"
+                rows={2}
+                maxLength={300}
+                aria-describedby="ex-note-hint"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className={`${inputClass} py-3`}
+              />
+              <PrivacyHint id="ex-note-hint" />
+            </div>
+          </FormSection>
         </fieldset>
-
         {(error || save.error || remove.error) && (
           <ErrorMessage>{error ?? errorMessage(save.error ?? remove.error)}</ErrorMessage>
         )}

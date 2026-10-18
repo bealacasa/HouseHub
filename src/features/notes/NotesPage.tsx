@@ -9,8 +9,9 @@ import {
   buttonPrimary,
   inputClass,
 } from "@/components/ui";
+import { PrivacyHint } from "@/components/form";
 import { useHouse } from "@/features/house/HouseGate";
-import { NOTES_WARNING, errorMessage } from "@/features/house/house";
+import { errorMessage } from "@/features/house/house";
 import { useAddNote, useDeleteNotes, useNotes, useToggleNote, type Note } from "./notes";
 
 /** Notas de la casa: una lista compartida para tachar («falta aceite», «acordarse de…»). */
@@ -62,9 +63,7 @@ export function NotesPage() {
             onChange={(e) => setText(e.target.value)}
             className={inputClass}
           />
-          <p id="note-hint" className="text-muted">
-            {NOTES_WARNING}
-          </p>
+          <PrivacyHint id="note-hint" />
           {add.isError && <ErrorMessage>{errorMessage(add.error)}</ErrorMessage>}
           <button type="submit" disabled={add.isPending} className={buttonPrimary}>
             Añadir nota

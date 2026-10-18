@@ -11,8 +11,9 @@ import {
   buttonSecondary,
   inputClass,
 } from "@/components/ui";
+import { PrivacyHint } from "@/components/form";
 import { useHouse } from "@/features/house/HouseGate";
-import { NOTES_WARNING, errorMessage } from "@/features/house/house";
+import { errorMessage } from "@/features/house/house";
 import { ImageError } from "@/lib/image";
 import {
   guideInputSchema,
@@ -131,9 +132,6 @@ function GuideForm({ guide }: { guide?: Guide }) {
           <label htmlFor="g-intro" className="mb-2 block text-xl font-semibold">
             Explicación breve (opcional)
           </label>
-          <p id="g-intro-hint" className="mb-2 text-muted">
-            {NOTES_WARNING}
-          </p>
           <textarea
             id="g-intro"
             rows={2}
@@ -143,6 +141,7 @@ function GuideForm({ guide }: { guide?: Guide }) {
             onChange={(e) => setIntro(e.target.value)}
             className={`${inputClass} py-3`}
           />
+          <PrivacyHint id="g-intro-hint" />
         </div>
 
         <h2 className="pt-2 text-2xl font-bold">Pasos</h2>
