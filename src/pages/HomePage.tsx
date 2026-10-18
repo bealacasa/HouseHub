@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { Card, PageTitle, buttonSecondary } from "@/components/ui";
 import { useMe } from "@/features/auth/RequireAuth";
+import { periodLabel, staysOn, toKey, useStays } from "@/features/calendar/stays";
 import { useHouse } from "@/features/house/HouseGate";
 import { useHousePhotoUrl } from "@/features/house/photo";
 import { InstallCard } from "@/pwa/InstallCard";
@@ -34,6 +35,7 @@ export function HomePage() {
             </Link>
           </Card>
         )}
+        <WhoIsGoing />
         {house.notes && (
           <Card>
             <h2 className="text-2xl font-bold">Notas de la casa</h2>
@@ -42,11 +44,50 @@ export function HomePage() {
         )}
         <Card>
           <p className="text-lg">
-            Muy pronto: «Llego a la casa», «Me voy de la casa», calendario, gastos y avisos.
+            Muy pronto: «Llego a la casa», «Me voy de la casa», gastos y avisos.
           </p>
         </Card>
         <InstallCard />
       </div>
     </>
+  );
+}
+
+/** Quién está ahora en la casa y quién va a ir (las 3 próximas reservas). */
+function WhoIsGoing() {
+  const { members } = useHouse();
+  const stays = useStays();
+  const today = toKey(new Date());
+  const all = stays.data ?? [];
+  const now = staysOn(all, today);
+  const next = all.filter((s) => s.start > today).slice(0, 3);
+  const nameOf = (id: string) => members.find((m) => m.id === id)?.displayName ?? "Alguien";
+  if (stays.isPending) return null;
+
+  return (
+    <Card>
+      <h2 className="text-2xl font-bold">¿Quién va a la casa?</h2>
+      <p className="mt-2 text-lg">
+        {now.length > 0 ? (
+          <>
+            <strong>Ahora está:</strong> {now.map((s) => nameOf(s.memberId)).join(", ")}
+          </>
+        ) : (
+          "Ahora mismo no hay nadie."
+        )}
+      </p>
+      {next.length > 0 && (
+        <ul className="mt-3 space-y-1 text-lg">
+          {next.map((s) => (
+            <li key={s.id}>
+              <strong>{nameOf(s.memberId)}</strong>: {periodLabel(s).toLowerCase()}
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link to="/calendario" className={`${buttonSecondary} mt-4`}>
+        Ver el calendario
+      </Link>
+    </Card>
   );
 }

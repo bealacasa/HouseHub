@@ -40,17 +40,21 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       {
         path: "calendario",
-        lazy: async () => {
-          const { ComingSoonPage } = await import("@/pages/ComingSoonPage");
-          return {
-            Component: () => (
-              <ComingSoonPage
-                title="Calendario"
-                text="Muy pronto verás aquí quién va a cada casa y cuándo."
-              />
-            ),
-          };
-        },
+        lazy: async () => ({
+          Component: (await import("@/features/calendar/CalendarPage")).CalendarPage,
+        }),
+      },
+      {
+        path: "calendario/nueva",
+        lazy: async () => ({
+          Component: (await import("@/features/calendar/StayFormPage")).StayFormPage,
+        }),
+      },
+      {
+        path: "calendario/:id",
+        lazy: async () => ({
+          Component: (await import("@/features/calendar/StayFormPage")).StayFormPage,
+        }),
       },
       {
         path: "gastos",

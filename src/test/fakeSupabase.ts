@@ -47,7 +47,12 @@ export function installFakeSupabase(
 
   // --- Casa, miembros e invitaciones (sin RLS: eso se prueba en supabase/tests) ---
   type Row = Record<string, unknown>;
-  const tables: Record<string, Row[]> = { houses: [], house_members: [], invitations: [] };
+  const tables: Record<string, Row[]> = {
+    houses: [],
+    house_members: [],
+    invitations: [],
+    stays: [],
+  };
   const uid = () => crypto.randomUUID();
   const ok = (data: unknown) => ({ data, error: null });
 
@@ -66,6 +71,7 @@ export function installFakeSupabase(
         filter = [col, value];
         return builder;
       },
+      gte: () => builder,
       order: () => builder,
       limit: () => builder,
       single: async () => ok(run()[0] ?? null),
