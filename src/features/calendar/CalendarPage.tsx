@@ -3,14 +3,21 @@ import { es } from "date-fns/locale";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Avatar, memberColor } from "@/components/Avatar";
-import { Card, ErrorMessage, PageTitle, buttonPrimary, cardShadow } from "@/components/ui";
-import { EventCard } from "@/features/events/EventsPage";
+import {
+  Card,
+  ErrorMessage,
+  PageTitle,
+  buttonPrimary,
+  buttonSecondary,
+  cardShadow,
+} from "@/components/ui";
 import { eventsOn, useEvents, type VillageEvent } from "@/features/events/events";
 import { useHouse } from "@/features/house/HouseGate";
 import type { Member } from "@/features/house/house";
 import {
   longDate,
   monthGrid,
+  periodLabel,
   nightsLabel,
   shortDate,
   staysOn,
@@ -112,37 +119,57 @@ export function CalendarPage() {
         <Legend members={members} stays={all} />
       </Card>
 
-      <section className="mt-6" aria-labelledby="dia-elegido">
-        <h2 id="dia-elegido" className="mb-3 text-2xl font-bold first-letter:uppercase">
-          {longDate(selected)}
-        </h2>
-        {eventsOn(allEvents, selected).length > 0 && (
-          <ul className="mb-3 space-y-3">
-            {eventsOn(allEvents, selected).map((e) => (
-              <li key={e.id}>
-                <EventCard event={e} />
-              </li>
-            ))}
-          </ul>
-        )}
-        <StayList
-          stays={staysOn(all, selected)}
-          members={members}
-          empty="La casa está libre ese día."
-        />
-        <Link
-          to={`/eventos/nuevo?dia=${selected}`}
-          className="mt-3 inline-flex min-h-12 items-center text-lg font-semibold text-accent underline"
-        >
-          + Añadir un evento del pueblo este día
-        </Link>
-      </section>
+      <Card className="mt-4">
+        <section aria-labelledby="dia-elegido">
+          {selected === today && (
+            <p className="mb-1 inline-block rounded-full bg-accent-soft px-3 text-base font-bold text-accent">
+              Hoy
+            </p>
+          )}
+          <h2 id="dia-elegido" className="text-2xl font-bold first-letter:uppercase">
+            {longDate(selected)}
+          </h2>
+          {eventsOn(allEvents, selected).length === 0 && staysOn(all, selected).length === 0 ? (
+            <p className="mt-2 text-lg text-muted">La casa está libre ese día.</p>
+          ) : (
+            <ul className="mt-2 divide-y divide-border">
+              {eventsOn(allEvents, selected).map((e) => (
+                <li key={e.id}>
+                  <EventRow event={e} />
+                </li>
+              ))}
+              {staysOn(all, selected).map((st) => (
+                <li key={st.id}>
+                  <StayRow stay={st} members={members} />
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link to={`/eventos/nuevo?dia=${selected}`} className={`${buttonSecondary} mt-3`}>
+            <span aria-hidden="true">⭐</span> Añadir evento del pueblo
+          </Link>
+        </section>
+      </Card>
 
       <section className="mt-8" aria-labelledby="proximas">
-        <h2 id="proximas" className="mb-3 text-2xl font-bold">
+        <h2 id="proximas" className="mb-2 text-xl font-bold">
           Próximas reservas
         </h2>
-        <StayList stays={upcoming} members={members} empty="No hay ninguna reserva todavía." />
+        {upcoming.length === 0 ? (
+          <p className="rounded-3xl border-2 border-dashed border-border p-5 text-center text-lg text-muted">
+            No hay ninguna reserva todavía.
+          </p>
+        ) : (
+          <Card className="overflow-hidden px-4! py-1!">
+            <ul className="divide-y divide-border">
+              {upcoming.map((st) => (
+                <li key={st.id}>
+                  <StayRow stay={st} members={members} />
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
       </section>
     </>
   );
@@ -288,30 +315,58 @@ function Legend({ members, stays }: { members: readonly Member[]; stays: readonl
   );
 }
 
-function StayList({
-  stays,
-  members,
-  empty,
-}: {
-  stays: Stay[];
-  members: readonly Member[];
-  empty: string;
-}) {
-  if (stays.length === 0) {
-    return (
-      <p className="rounded-3xl border-2 border-dashed border-border p-5 text-center text-lg text-muted">
-        {empty}
-      </p>
-    );
-  }
+/** Fila compacta de una reserva (dentro de una tarjeta con separadores). */
+function StayRow({ stay, members }: { stay: Stay; members: readonly Member[] }) {
+  const member = members.find((m) => m.id === stay.memberId);
+  const color = memberColor(members, stay.memberId);
+  const sameDay = stay.start === stay.end;
   return (
-    <ul className="space-y-3">
-      {stays.map((s) => (
-        <li key={s.id}>
-          <StayCard stay={s} members={members} />
-        </li>
-      ))}
-    </ul>
+    <Link to={`/calendario/${stay.id}`} className="flex min-h-18 items-center gap-3 py-3">
+      {member ? (
+        <Avatar member={member} members={members} size="sm" />
+      ) : (
+        <span aria-hidden="true" className={`size-10 rounded-full ${color.solid}`} />
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-lg font-bold">{member?.displayName ?? "Alguien"}</span>
+        <span className="block truncate text-base text-muted">
+          {sameDay ? shortDate(stay.start) : `${shortDate(stay.start)} – ${shortDate(stay.end)}`} ·{" "}
+          {stay.people} {stay.people === 1 ? "persona" : "personas"}
+        </span>
+      </span>
+      <span aria-hidden="true" className={`h-8 w-1.5 shrink-0 rounded-full ${color.solid}`} />
+      <span aria-hidden="true" className="text-2xl text-muted">
+        ›
+      </span>
+    </Link>
+  );
+}
+
+/** Fila de un evento del pueblo (estrella rosa, como en el calendario). */
+function EventRow({ event }: { event: VillageEvent }) {
+  return (
+    <Link
+      to={`/eventos/${event.id}`}
+      aria-label={`${event.title}. ${periodLabel(event)}${event.place ? `, en ${event.place}` : ""}`}
+      className="flex min-h-18 items-center gap-3 py-3"
+    >
+      <span
+        aria-hidden="true"
+        className="grid size-10 shrink-0 place-items-center rounded-full bg-rose-700 text-lg text-white"
+      >
+        ★
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-lg font-bold">{event.title}</span>
+        <span className="block truncate text-base text-muted first-letter:uppercase">
+          {periodLabel(event)}
+          {event.place && ` · ${event.place}`}
+        </span>
+      </span>
+      <span aria-hidden="true" className="text-2xl text-muted">
+        ›
+      </span>
+    </Link>
   );
 }
 

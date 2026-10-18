@@ -29,7 +29,7 @@ export function GuidePage() {
       </Link>
       <PageTitle title={guide.title} />
       {guide.intro && (
-        <Card className="mb-5 bg-accent-soft">
+        <Card className="mb-5 bg-accent-soft!">
           <p className="whitespace-pre-line text-xl">{guide.intro}</p>
         </Card>
       )}
@@ -53,7 +53,7 @@ export function GuidePage() {
 function StepCard({ step, number, total }: { step: GuideStep; number: number; total: number }) {
   const url = useStepPhotoUrl(step.photo);
   return (
-    <Card className="p-0">
+    <Card className="overflow-hidden p-0!">
       {url.data && (
         <img
           src={url.data}

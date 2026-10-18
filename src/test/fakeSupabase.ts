@@ -148,6 +148,7 @@ export function installFakeSupabase(
     }
     if (fn === "save_expense") {
       const id = (args.p_id as string | null) ?? uid();
+      const previous = tables.expenses!.find((e) => e.id === id);
       tables.expenses = tables.expenses!.filter((e) => e.id !== id);
       tables.expenses.push({
         id,
@@ -159,6 +160,7 @@ export function installFakeSupabase(
         split_mode: args.p_split,
         note: args.p_note,
         created_by: user.id,
+        recurring_id: previous?.recurring_id ?? null,
         expense_shares: (args.p_shares as { member: string; cents: number }[]).map((s) => ({
           member_id: s.member,
           cents: s.cents,

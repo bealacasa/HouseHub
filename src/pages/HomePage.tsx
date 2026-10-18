@@ -49,7 +49,7 @@ export function HomePage() {
       <QuickActions />
       <div className="mt-6 space-y-5">
         {isAdmin && onlyMe && (
-          <Card className="border-accent/40 bg-accent-soft">
+          <Card className="border-accent/40 bg-accent-soft!">
             <div className="flex items-start gap-4">
               <span
                 aria-hidden="true"

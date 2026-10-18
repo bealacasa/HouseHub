@@ -77,9 +77,12 @@ describe("gastos", () => {
       every_months: 1,
     });
     expect(fake.rpc).toHaveBeenCalledWith("run_recurring");
+    await user.click(await screen.findByRole("tab", { name: "Gastos" }));
     expect(await screen.findByRole("heading", { name: "Gastos fijos" })).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Dejar de repetir" }));
-    await user.click(await screen.findByRole("button", { name: "Sí, dejar de repetir" }));
+    // Para dejar de repetirlo: se abre y en «¿Se repite?» se elige «No».
+    await user.click(screen.getByRole("link", { name: /^Fibra, 35,00/ }));
+    await user.click(await screen.findByLabelText(/^No$/));
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
     await vi.waitFor(() => expect(fake.tables.recurring_expenses).toHaveLength(0));
     // El gasto ya apuntado se queda.
     expect(fake.tables.expenses).toHaveLength(1);
@@ -140,5 +143,11 @@ describe("gastos", () => {
         cents: 2000,
       }),
     );
+    // El pago queda en el historial (pestaña «Pagos»).
+    expect(await screen.findByText(/Lo verás en la pestaña «Pagos»/)).toBeTruthy();
+    await user.click(screen.getByRole("tab", { name: "Pagos" }));
+    const history = await screen.findByRole("tabpanel", { name: "Pagos" });
+    expect(history.textContent).toMatch(/Abuelo pagó a Ana/);
+    expect(history.textContent).toMatch(/20,00/);
   });
 });
