@@ -1,10 +1,19 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { ErrorMessage, PageTitle, buttonDanger, buttonPrimary, inputClass } from "@/components/ui";
+import { Avatar } from "@/components/Avatar";
+import {
+  ErrorMessage,
+  PageTitle,
+  backLink,
+  buttonDanger,
+  buttonPrimary,
+  inputClass,
+} from "@/components/ui";
 import { useHouse } from "@/features/house/HouseGate";
 import { NOTES_WARNING, errorMessage } from "@/features/house/house";
 import {
+  nightsLabel,
   overlapping,
   periodLabel,
   stayInputSchema,
@@ -89,32 +98,37 @@ function StayForm({ stay, all }: { stay?: Stay; all: Stay[] }) {
 
   return (
     <>
-      <Link
-        to="/calendario"
-        className="mb-2 inline-flex min-h-12 items-center text-lg font-semibold text-accent"
-      >
+      <Link to="/calendario" className={backLink}>
         ← Calendario
       </Link>
       <PageTitle title={stay ? "La reserva" : "Reservar unos días"} />
       <form noValidate onSubmit={(e) => void onSubmit(e)} className="space-y-5">
         <fieldset disabled={!canEdit} className="space-y-5">
-          <div>
-            <label htmlFor="stay-who" className="mb-2 block text-xl font-semibold">
-              ¿Quién va?
-            </label>
-            <select
-              id="stay-who"
-              value={memberId}
-              onChange={(e) => setMemberId(e.target.value)}
-              className={inputClass}
-            >
+          {/* Elegir tocando la foto: más fácil que un desplegable. */}
+          <fieldset>
+            <legend className="mb-3 text-xl font-semibold">¿Quién va?</legend>
+            <div className="grid grid-cols-3 gap-2">
               {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.id === me.id ? `${m.displayName} (yo)` : m.displayName}
-                </option>
+                <label
+                  key={m.id}
+                  className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border-2 border-transparent bg-surface p-2 text-center shadow-sm has-checked:border-accent has-checked:bg-accent-soft has-focus-visible:ring-3 has-focus-visible:ring-focus"
+                >
+                  <input
+                    type="radio"
+                    name="stay-who"
+                    value={m.id}
+                    checked={memberId === m.id}
+                    onChange={() => setMemberId(m.id)}
+                    className="sr-only"
+                  />
+                  <Avatar member={m} members={members} />
+                  <span className="text-base font-bold leading-tight">
+                    {m.id === me.id ? "Yo" : m.displayName}
+                  </span>
+                </label>
               ))}
-            </select>
-          </div>
+            </div>
+          </fieldset>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="stay-start" className="mb-2 block text-xl font-semibold">
@@ -145,6 +159,14 @@ function StayForm({ stay, all }: { stay?: Stay; all: Stay[] }) {
               />
             </div>
           </div>
+          {start && end && end >= start && (
+            <p
+              aria-live="polite"
+              className="-mt-2 rounded-2xl bg-accent-soft px-4 py-3 text-lg font-semibold"
+            >
+              📅 {periodLabel({ start, end })} · {nightsLabel({ start, end })}
+            </p>
+          )}
           <div>
             <p id="stay-people-label" className="mb-2 text-xl font-semibold">
               ¿Cuántas personas?

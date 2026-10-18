@@ -110,15 +110,32 @@ async function attempt(
   }
 }
 
-export function signInWithPasskey(): Promise<AuthResult> {
-  return attempt(
+/** Marca de «ya se ofreció (o ya se usa) la cara o huella en este móvil». */
+export const PASSKEY_ASKED = "househub:passkey-asked";
+
+export async function signInWithPasskey(): Promise<AuthResult> {
+  const result = await attempt(
     () => getSupabase().auth.signInWithPasskey(),
     "No se pudo entrar con la cara o la huella. Usa el código.",
   );
+  // Si ya entra con la cara o huella, no hace falta ofrecérselo.
+  if (result.ok) {
+    try {
+      localStorage.setItem(PASSKEY_ASKED, "1");
+    } catch {
+      // Sin almacenamiento: se ofrecerá, sin más.
+    }
+  }
+  return result;
 }
 
-export function registerPasskey(): Promise<AuthResult> {
-  return attempt(() => getSupabase().auth.registerPasskey(), "No se pudo activar.");
+export async function registerPasskey(): Promise<AuthResult> {
+  const result = await attempt(() => getSupabase().auth.registerPasskey(), "No se pudo activar.");
+  // InvalidStateError / «previously registered»: este móvil ya la tenía activada.
+  if (!result.ok && /InvalidState|previously registered|already registered/i.test(result.error)) {
+    return { ok: true };
+  }
+  return result;
 }
 
 /** Cierra la sesión en este móvil o, con `everywhere`, en todos los dispositivos. */

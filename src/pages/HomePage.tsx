@@ -1,12 +1,17 @@
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { Link } from "react-router";
-import { Card, PageTitle, buttonSecondary } from "@/components/ui";
+import { Avatar } from "@/components/Avatar";
+import { UsersIcon } from "@/components/icons";
+import { Card, buttonSecondary } from "@/components/ui";
 import { useMe } from "@/features/auth/RequireAuth";
-import { periodLabel, staysOn, toKey, useStays } from "@/features/calendar/stays";
+import { StayCard } from "@/features/calendar/CalendarPage";
+import { staysOn, toKey, useStays } from "@/features/calendar/stays";
 import { useHouse } from "@/features/house/HouseGate";
 import { useHousePhotoUrl } from "@/features/house/photo";
 import { InstallCard } from "@/pwa/InstallCard";
 
-/** Inicio. En las próximas fases: «Llego / Me voy», quién está, avisos y saldo. */
+/** Inicio. En las próximas fases: «Llego / Me voy», avisos y saldo. */
 export function HomePage() {
   const { profile } = useMe();
   const { house, members, isAdmin } = useHouse();
@@ -15,22 +20,39 @@ export function HomePage() {
 
   return (
     <>
-      <PageTitle title={`Hola, ${profile.displayName}`} />
-      <div className="space-y-4">
+      <header className="mb-6">
+        <p className="text-lg font-semibold text-muted first-letter:uppercase">
+          {format(new Date(), "EEEE d 'de' MMMM", { locale: es })}
+        </p>
+        <h1 className="text-4xl font-extrabold leading-tight tracking-tight">
+          Hola, {profile.displayName}
+        </h1>
+      </header>
+      <div className="space-y-5">
         {photo.data && (
           <img
             src={photo.data}
             alt={`Foto de ${house.name}`}
-            className="aspect-[4/3] w-full rounded-3xl object-cover"
+            className="aspect-[16/10] w-full rounded-3xl object-cover shadow-lg"
           />
         )}
         {isAdmin && onlyMe && (
-          <Card className="border-accent">
-            <h2 className="text-2xl font-bold">Invita a la familia</h2>
-            <p className="mt-2 text-lg">
-              Manda un enlace por WhatsApp a cada persona para que entre en {house.name}.
-            </p>
-            <Link to="/familia" className={`${buttonSecondary} mt-4`}>
+          <Card className="border-accent/40 bg-accent-soft">
+            <div className="flex items-start gap-4">
+              <span
+                aria-hidden="true"
+                className="grid size-14 shrink-0 place-items-center rounded-2xl bg-linear-to-br from-accent to-accent-2 text-accent-contrast"
+              >
+                <UsersIcon />
+              </span>
+              <div>
+                <h2 className="text-2xl font-bold">Invita a la familia</h2>
+                <p className="mt-1 text-lg">
+                  Manda un enlace por WhatsApp a cada persona para que entre en {house.name}.
+                </p>
+              </div>
+            </div>
+            <Link to="/familia" className={`${buttonSecondary} mt-4 bg-surface`}>
               Invitar a alguien
             </Link>
           </Card>
@@ -38,56 +60,64 @@ export function HomePage() {
         <WhoIsGoing />
         {house.notes && (
           <Card>
-            <h2 className="text-2xl font-bold">Notas de la casa</h2>
+            <h2 className="text-2xl font-bold">📝 Notas de la casa</h2>
             <p className="mt-2 whitespace-pre-line text-lg">{house.notes}</p>
           </Card>
         )}
-        <Card>
-          <p className="text-lg">
-            Muy pronto: «Llego a la casa», «Me voy de la casa», gastos y avisos.
-          </p>
-        </Card>
         <InstallCard />
       </div>
     </>
   );
 }
 
-/** Quién está ahora en la casa y quién va a ir (las 3 próximas reservas). */
+/** Quién está ahora en la casa y quién va a ir (las 2 próximas reservas). */
 function WhoIsGoing() {
   const { members } = useHouse();
   const stays = useStays();
   const today = toKey(new Date());
   const all = stays.data ?? [];
   const now = staysOn(all, today);
-  const next = all.filter((s) => s.start > today).slice(0, 3);
-  const nameOf = (id: string) => members.find((m) => m.id === id)?.displayName ?? "Alguien";
+  const next = all.filter((s) => s.start > today).slice(0, 2);
   if (stays.isPending) return null;
+  const present = members.filter((m) => now.some((s) => s.memberId === m.id));
 
   return (
-    <Card>
-      <h2 className="text-2xl font-bold">¿Quién va a la casa?</h2>
-      <p className="mt-2 text-lg">
-        {now.length > 0 ? (
-          <>
-            <strong>Ahora está:</strong> {now.map((s) => nameOf(s.memberId)).join(", ")}
-          </>
+    <section aria-labelledby="quien-va" className="space-y-3">
+      <Card>
+        <h2 id="quien-va" className="text-2xl font-bold">
+          ¿Quién está en la casa?
+        </h2>
+        {present.length > 0 ? (
+          <ul className="mt-3 flex flex-wrap gap-3">
+            {present.map((m) => (
+              <li
+                key={m.id}
+                className="flex items-center gap-2 rounded-full bg-surface-2 py-1 pl-1 pr-4"
+              >
+                <Avatar member={m} members={members} size="sm" />
+                <span className="text-lg font-bold">{m.displayName}</span>
+              </li>
+            ))}
+          </ul>
         ) : (
-          "Ahora mismo no hay nadie."
+          <p className="mt-2 text-lg text-muted">Ahora mismo no hay nadie.</p>
         )}
-      </p>
+      </Card>
       {next.length > 0 && (
-        <ul className="mt-3 space-y-1 text-lg">
-          {next.map((s) => (
-            <li key={s.id}>
-              <strong>{nameOf(s.memberId)}</strong>: {periodLabel(s).toLowerCase()}
-            </li>
-          ))}
-        </ul>
+        <>
+          <h3 className="px-1 pt-2 text-xl font-bold">Próximamente</h3>
+          <ul className="space-y-3">
+            {next.map((s) => (
+              <li key={s.id}>
+                <StayCard stay={s} members={members} />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
-      <Link to="/calendario" className={`${buttonSecondary} mt-4`}>
+      <Link to="/calendario" className={buttonSecondary}>
         Ver el calendario
       </Link>
-    </Card>
+    </section>
   );
 }

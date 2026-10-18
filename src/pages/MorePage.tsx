@@ -1,11 +1,11 @@
 import { Link } from "react-router";
-import { PageTitle } from "@/components/ui";
+import { PageTitle, cardShadow } from "@/components/ui";
 
 const ITEMS = [
-  { to: "/casa", label: "La casa", hint: "Nombre, dirección, foto y notas" },
-  { to: "/familia", label: "La familia", hint: "Quién está e invitar a alguien" },
-  { to: "/ajustes", label: "Mi cuenta y ajustes", hint: "Tu nombre, cara o huella, cerrar sesión" },
-  { to: "/privacidad", label: "Privacidad", hint: "Qué datos guardamos y para qué" },
+  { to: "/casa", emoji: "🏡", label: "La casa", hint: "Nombre, dirección, foto y notas" },
+  { to: "/familia", emoji: "👨‍👩‍👧", label: "La familia", hint: "Quién está e invitar a alguien" },
+  { to: "/ajustes", emoji: "🙂", label: "Mi cuenta", hint: "Tu foto, nombre, cara o huella" },
+  { to: "/privacidad", emoji: "🔒", label: "Privacidad", hint: "Qué datos guardamos y para qué" },
 ] as const;
 
 /** «Más»: una lista de botones grandes con su nombre (nada escondido en menús). */
@@ -18,8 +18,14 @@ export function MorePage() {
           <li key={item.to}>
             <Link
               to={item.to}
-              className="flex min-h-20 items-center gap-3 rounded-3xl border-2 border-border bg-surface p-5 active:scale-[0.99]"
+              className={`flex min-h-24 items-center gap-4 rounded-3xl border border-border/70 bg-surface p-4 active:scale-[0.99] ${cardShadow}`}
             >
+              <span
+                aria-hidden="true"
+                className="grid size-14 shrink-0 place-items-center rounded-2xl bg-accent-soft text-3xl"
+              >
+                {item.emoji}
+              </span>
               <span className="flex-1">
                 <span className="block text-xl font-bold">{item.label}</span>
                 <span className="block text-lg text-muted">{item.hint}</span>

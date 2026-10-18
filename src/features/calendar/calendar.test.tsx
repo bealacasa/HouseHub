@@ -58,6 +58,8 @@ describe("calendario", () => {
       created_by: null,
     });
     renderAt("/");
-    expect(await screen.findByText(/Ahora está:/)).toBeTruthy();
+    const box = await screen.findByRole("heading", { name: "¿Quién está en la casa?" });
+    expect(box.parentElement!.textContent).toContain("Ana");
+    expect(box.parentElement!.textContent).not.toContain("no hay nadie");
   });
 });

@@ -24,6 +24,8 @@ export type Member = {
   userId: string | null;
   displayName: string;
   role: Role;
+  /** Foto de perfil en Storage (bucket avatars), o null. */
+  avatarPath: string | null;
 };
 
 export type Invitation = {
@@ -50,6 +52,8 @@ const memberRow = z.object({
   user_id: z.uuid().nullable(),
   display_name: z.string(),
   role: z.enum(["admin", "member"]),
+  // Migración 0004 (opcional por si aún no se ha aplicado).
+  avatar_path: z.string().nullable().optional(),
 });
 
 const invitationRow = z.object({
@@ -109,7 +113,13 @@ function toHouse(raw: unknown): House {
 
 function toMember(raw: unknown): Member {
   const r = memberRow.parse(raw);
-  return { id: r.id, userId: r.user_id, displayName: r.display_name, role: r.role };
+  return {
+    id: r.id,
+    userId: r.user_id,
+    displayName: r.display_name,
+    role: r.role,
+    avatarPath: r.avatar_path ?? null,
+  };
 }
 
 export async function fetchHouseState(userId: string): Promise<HouseState> {
@@ -127,7 +137,7 @@ export async function fetchHouseState(userId: string): Promise<HouseState> {
   }
   const { data: rows, error: membersError } = await supabase
     .from("house_members")
-    .select("id, user_id, display_name, role")
+    .select("*")
     .order("display_name");
   if (membersError) throw membersError;
   const members = (rows ?? []).map(toMember);

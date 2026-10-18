@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { Avatar } from "@/components/Avatar";
 import { useConfirm } from "@/components/ConfirmDialog";
 import {
   Card,
   ErrorMessage,
   PageTitle,
   SuccessMessage,
+  backLink,
   buttonPrimary,
   buttonSecondary,
   inputClass,
@@ -23,6 +25,7 @@ import {
   type Member,
   type Role,
 } from "./house";
+import { AvatarPicker } from "./AvatarPicker";
 import { useHouse } from "./HouseGate";
 
 /** La familia: quién está en la casa. Los administradores invitan y gestionan. */
@@ -30,10 +33,7 @@ export function FamilyPage() {
   const { house, members, me, isAdmin } = useHouse();
   return (
     <>
-      <Link
-        to="/mas"
-        className="mb-2 inline-flex min-h-12 items-center text-lg font-semibold text-accent"
-      >
+      <Link to="/mas" className={backLink}>
         ← Más
       </Link>
       <PageTitle title="La familia" subtitle={`Quién está en ${house.name}.`} />
@@ -64,10 +64,12 @@ function MemberRow({
   isMe: boolean;
   canManage: boolean;
 }) {
+  const { members } = useHouse();
   const [editing, setEditing] = useState(false);
   return (
     <li className="py-4">
       <div className="flex items-center gap-3">
+        <Avatar member={member} members={members} />
         <span className="min-w-0 flex-1">
           <span className="block text-xl font-bold">
             {member.displayName}
@@ -107,6 +109,7 @@ function EditMember({
   const update = useUpdateMember();
   const remove = useRemoveMember();
   const [dialog, confirm] = useConfirm();
+  const { house, members } = useHouse();
   const error = update.error ?? remove.error;
 
   async function onRemove() {
@@ -121,12 +124,13 @@ function EditMember({
   return (
     <form
       noValidate
-      className="mt-3 space-y-3"
+      className="mt-4 space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
         update.mutate({ id: member.id, displayName: name, role }, { onSuccess: onDone });
       }}
     >
+      <AvatarPicker houseId={house.id} member={member} members={members} />
       <label htmlFor={`name-${member.id}`} className="block text-lg font-semibold">
         Nombre
       </label>

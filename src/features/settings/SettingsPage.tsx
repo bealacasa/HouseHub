@@ -8,15 +8,19 @@ import {
   SuccessMessage,
   buttonDanger,
   buttonPrimary,
+  backLink,
   buttonSecondary,
   inputClass,
 } from "@/components/ui";
 import { passkeysSupported, registerPasskey, signOut } from "@/features/auth/auth";
 import { useSaveName } from "@/features/auth/profile";
 import { useMe } from "@/features/auth/RequireAuth";
+import { AvatarPicker } from "@/features/house/AvatarPicker";
+import { useHouse } from "@/features/house/HouseGate";
 
 export function SettingsPage() {
   const { session, profile } = useMe();
+  const { house, members, me } = useHouse();
   const [dialog, confirm] = useConfirm();
 
   async function signOutEverywhere() {
@@ -31,14 +35,15 @@ export function SettingsPage() {
 
   return (
     <>
-      <Link
-        to="/mas"
-        className="mb-2 inline-flex min-h-12 items-center text-lg font-semibold text-accent"
-      >
+      <Link to="/mas" className={backLink}>
         ← Más
       </Link>
       <PageTitle title="Mi cuenta" subtitle={session.user.email ?? undefined} />
       <div className="space-y-4">
+        <Card>
+          <h2 className="mb-4 text-2xl font-bold">Tu foto</h2>
+          <AvatarPicker houseId={house.id} member={me} members={members} />
+        </Card>
         <NameCard userId={session.user.id} current={profile.displayName} />
         {passkeysSupported() && <PasskeyCard />}
         <Card>

@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import { Link } from "react-router";
 import {
+  backLink,
   Card,
   ErrorMessage,
   PageTitle,
@@ -19,10 +20,7 @@ export function HouseSettingsPage() {
   const { house, isAdmin } = useHouse();
   return (
     <>
-      <Link
-        to="/mas"
-        className="mb-2 inline-flex min-h-12 items-center text-lg font-semibold text-accent"
-      >
+      <Link to="/mas" className={backLink}>
         ← Más
       </Link>
       <PageTitle title="La casa" />

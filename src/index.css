@@ -6,15 +6,18 @@
  */
 :root {
   color-scheme: light dark;
-  --bg: #f7f5f2;
+  --bg: #eef1f6;
   --surface: #ffffff;
-  --surface-2: #ece8e1;
+  --surface-2: #e7ebf2;
   --text: #111111;
   --muted: #3f3f46;
-  --border: #8a8a8a;
+  --border: #c9d0dc;
+  /* Bordes de campos y botones: contraste >= 3:1 con el fondo. */
+  --field: #66728a;
   --accent: #1e3a5f;
   --accent-contrast: #ffffff;
-  --accent-soft: #dbe7f5;
+  --accent-soft: #dde8f7;
+  --accent-2: #1d4ed8;
   --arrive: #14532d;
   --leave: #7c2d12;
   --danger: #991b1b;
@@ -26,15 +29,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #10161d;
-    --surface: #1a232e;
-    --surface-2: #26313e;
+    --bg: #0d1218;
+    --surface: #18212c;
+    --surface-2: #233040;
     --text: #f7f7f5;
     --muted: #d6d6d0;
-    --border: #8b97a6;
+    --border: #3b4a5c;
+    --field: #8796ab;
     --accent: #a8cdf5;
     --accent-contrast: #0b1a2e;
-    --accent-soft: #23384f;
+    --accent-soft: #1f3550;
+    --accent-2: #7cb4ff;
     --arrive: #86efac;
     --leave: #fdba74;
     --danger: #fca5a5;
@@ -52,9 +57,11 @@
   --color-text: var(--text);
   --color-muted: var(--muted);
   --color-border: var(--border);
+  --color-field: var(--field);
   --color-accent: var(--accent);
   --color-accent-contrast: var(--accent-contrast);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-2: var(--accent-2);
   --color-arrive: var(--arrive);
   --color-leave: var(--leave);
   --color-danger: var(--danger);

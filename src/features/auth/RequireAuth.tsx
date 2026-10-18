@@ -1,14 +1,8 @@
 import type { Session } from "@supabase/supabase-js";
 import { createContext, use, useState } from "react";
 import { Navigate } from "react-router";
-import {
-  ErrorMessage,
-  SuccessMessage,
-  buttonPrimary,
-  buttonSecondary,
-  inputClass,
-} from "@/components/ui";
-import { passkeysSupported, registerPasskey, useSession } from "./auth";
+import { ErrorMessage, buttonPrimary, buttonSecondary, inputClass } from "@/components/ui";
+import { PASSKEY_ASKED, passkeysSupported, registerPasskey, useSession } from "./auth";
 import { useProfile, useSaveName, type Profile } from "./profile";
 
 type Me = { session: Session; profile: Profile };
@@ -20,8 +14,6 @@ export function useMe(): Me {
   if (!me) throw new Error("useMe fuera de RequireAuth");
   return me;
 }
-
-const PASSKEY_ASKED = "househub:passkey-asked";
 
 /**
  * Protege las pantallas privadas. Sin sesión → /acceso. La primera vez pregunta el nombre
@@ -95,47 +87,53 @@ function AskName({ userId }: { userId: string }) {
   );
 }
 
+/**
+ * Se ofrece una sola vez por móvil, justo después de entrar con el código. Si ya entraste
+ * con la cara o la huella, no aparece. Al aceptarla, sigue sola al inicio.
+ */
 function OfferPasskey({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
   return (
     <Centered>
-      <div className="space-y-4">
-        <h1 className="text-3xl font-extrabold">Entra más fácil la próxima vez</h1>
+      <div className="space-y-5 text-center">
+        <span
+          aria-hidden="true"
+          className="mx-auto grid size-24 place-items-center rounded-full bg-linear-to-br from-accent to-accent-2 text-5xl text-accent-contrast shadow-lg"
+        >
+          🙂
+        </span>
+        <h1 className="text-3xl font-extrabold leading-tight">
+          ¿Quieres entrar con tu cara o tu huella?
+        </h1>
         <p className="text-xl">
-          Puedes entrar con <strong>tu cara o tu huella</strong>, sin esperar ningún correo.
+          Así, la próxima vez <strong>no tendrás que esperar el código del correo</strong>: solo
+          mirar el móvil o poner el dedo.
         </p>
         {error && <ErrorMessage>{error}</ErrorMessage>}
-        {done ? (
-          <>
-            <SuccessMessage>
-              ¡Listo! La próxima vez pulsa «Entrar con mi cara o huella».
-            </SuccessMessage>
-            <button type="button" onClick={onDone} className={buttonPrimary}>
-              Continuar
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() =>
-                void registerPasskey().then((r) => (r.ok ? setDone(true) : setError(r.error)))
-              }
-              className={buttonPrimary}
-            >
-              Sí, activar
-            </button>
-            <button type="button" onClick={onDone} className={buttonSecondary}>
-              Ahora no
-            </button>
-          </>
-        )}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            void registerPasskey().then((r) => {
+              setBusy(false);
+              if (r.ok) onDone();
+              else setError(r.error);
+            });
+          }}
+          className={buttonPrimary}
+        >
+          {busy ? "Un momento…" : "Sí, usar mi cara o huella"}
+        </button>
+        <button type="button" onClick={onDone} className={buttonSecondary}>
+          No, prefiero el código
+        </button>
+        <p className="text-lg text-muted">Puedes cambiarlo cuando quieras en Más → Mi cuenta.</p>
       </div>
     </Centered>
   );
 }
-
 function Centered({ children }: { children: React.ReactNode }) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[calc(2rem+env(safe-area-inset-top))]">

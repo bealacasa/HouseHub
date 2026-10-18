@@ -30,7 +30,7 @@ function encode(canvas: HTMLCanvasElement, type: string, quality: number): Promi
 }
 
 /** Redimensiona, respeta la orientación, quita EXIF/GPS y comprime (WebP o, si no, JPEG). */
-export async function processImage(file: File): Promise<Blob> {
+export async function processImage(file: File, maxSide = MAX_SIDE): Promise<Blob> {
   validateImageFile(file);
   let bitmap: ImageBitmap;
   try {
@@ -39,7 +39,7 @@ export async function processImage(file: File): Promise<Blob> {
     throw new ImageError("No se pudo leer la foto. Prueba con otra.");
   }
   try {
-    const { width, height } = fitWithin(bitmap.width, bitmap.height, MAX_SIDE);
+    const { width, height } = fitWithin(bitmap.width, bitmap.height, maxSide);
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
