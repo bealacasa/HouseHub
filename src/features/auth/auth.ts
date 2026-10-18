@@ -90,16 +90,35 @@ export async function verifyLink(tokenHash: string): Promise<AuthResult> {
 export const passkeysSupported = () =>
   typeof window !== "undefined" && "PublicKeyCredential" in window;
 
-export async function signInWithPasskey(): Promise<AuthResult> {
-  const { error } = await getSupabase().auth.signInWithPasskey();
-  return error
-    ? { ok: false, error: "No se pudo entrar con la cara o la huella. Usa el código." }
-    : { ok: true };
+/** Detalle técnico del fallo (para poder diagnosticarlo), sin datos personales. */
+function detail(error: unknown): string {
+  const e = error as { name?: string; message?: string; code?: string; status?: number } | null;
+  const parts = [e?.name, e?.code, e?.status, e?.message].filter(Boolean).join(" · ");
+  return parts ? ` (Detalle: ${parts.slice(0, 200)})` : "";
 }
 
-export async function registerPasskey(): Promise<AuthResult> {
-  const { error } = await getSupabase().auth.registerPasskey();
-  return error ? { ok: false, error: "No se pudo activar. Inténtalo más tarde." } : { ok: true };
+async function attempt(
+  action: () => Promise<{ error: unknown }>,
+  message: string,
+): Promise<AuthResult> {
+  try {
+    const { error } = await action();
+    return error ? { ok: false, error: message + detail(error) } : { ok: true };
+  } catch (thrown) {
+    // El navegador puede lanzar errores propios (p. ej. NotAllowedError si se cancela).
+    return { ok: false, error: message + detail(thrown) };
+  }
+}
+
+export function signInWithPasskey(): Promise<AuthResult> {
+  return attempt(
+    () => getSupabase().auth.signInWithPasskey(),
+    "No se pudo entrar con la cara o la huella. Usa el código.",
+  );
+}
+
+export function registerPasskey(): Promise<AuthResult> {
+  return attempt(() => getSupabase().auth.registerPasskey(), "No se pudo activar.");
 }
 
 /** Cierra la sesión en este móvil o, con `everywhere`, en todos los dispositivos. */
