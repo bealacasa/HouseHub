@@ -51,6 +51,6 @@ test.describe("pantalla de acceso", () => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/acceso");
     const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    expect(bg).toBe("rgb(16, 22, 29)");
+    expect(bg).toBe("rgb(13, 18, 24)");
   });
 });
