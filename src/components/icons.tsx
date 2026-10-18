@@ -74,3 +74,9 @@ export const ListIcon = (p: IconProps) => (
     <path d="m4 7 2 2 3-3M4 15l2 2 3-3M12 8h8M12 16h8" />
   </Svg>
 );
+
+export const BookIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5ZM4 19a2 2 0 0 1 2-2h13M8 7h7M8 11h5" />
+  </Svg>
+);

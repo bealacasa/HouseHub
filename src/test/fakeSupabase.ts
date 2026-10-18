@@ -54,6 +54,7 @@ export function installFakeSupabase(
     stays: [],
     house_notes: [],
     village_events: [],
+    guides: [],
   };
   const uid = () => crypto.randomUUID();
   const ok = (data: unknown) => ({ data, error: null });
@@ -77,6 +78,7 @@ export function installFakeSupabase(
       order: () => builder,
       limit: () => builder,
       single: async () => ok(run()[0] ?? null),
+      select: () => builder,
       then<T>(resolve: (v: { data: Row[]; error: null }) => T) {
         return Promise.resolve(ok(run()) as { data: Row[]; error: null }).then(resolve);
       },
@@ -152,17 +154,24 @@ export function installFakeSupabase(
     if (table !== "profiles") {
       return {
         select: () => query(table),
-        insert: async (row: Row) => {
+        insert: (row: Row) => {
           // Valores por defecto como en Postgres (las columnas que sobran se ignoran).
-          rows(table).push({
+          const created: Row = {
             id: uid(),
             user_id: null,
             done_at: null,
             created_by: user.id,
             created_at: new Date().toISOString(),
             ...row,
-          });
-          return { error: null };
+          };
+          rows(table).push(created);
+          // Se puede esperar directamente o encadenar .select().single() como en supabase-js.
+          return {
+            select: () => ({ single: async () => ok({ id: created.id }) }),
+            then<T>(resolve: (v: { error: null }) => T) {
+              return Promise.resolve({ error: null }).then(resolve);
+            },
+          };
         },
         update: (changes: Row) => ({
           eq: async (col: string, value: unknown) => {

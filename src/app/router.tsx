@@ -75,6 +75,28 @@ export const router = createBrowserRouter([
         lazy: async () => ({ Component: (await import("@/pages/MorePage")).MorePage }),
       },
       {
+        path: "instrucciones",
+        lazy: async () => ({
+          Component: (await import("@/features/guides/GuidesPage")).GuidesPage,
+        }),
+      },
+      {
+        path: "instrucciones/nueva",
+        lazy: async () => ({
+          Component: (await import("@/features/guides/GuideFormPage")).GuideFormPage,
+        }),
+      },
+      {
+        path: "instrucciones/:id",
+        lazy: async () => ({ Component: (await import("@/features/guides/GuidePage")).GuidePage }),
+      },
+      {
+        path: "instrucciones/:id/editar",
+        lazy: async () => ({
+          Component: (await import("@/features/guides/GuideFormPage")).GuideFormPage,
+        }),
+      },
+      {
         path: "notas",
         lazy: async () => ({ Component: (await import("@/features/notes/NotesPage")).NotesPage }),
       },
