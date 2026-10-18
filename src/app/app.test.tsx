@@ -35,8 +35,7 @@ describe("acceso a la app", () => {
     await user.type(screen.getByLabelText("Escribe el código"), "123456");
     await user.click(screen.getByRole("button", { name: "Entrar" }));
 
-    // Con la sesión abierta, el inicio pide el nombre la primera vez.
-    await memory.navigate("/");
+    // Entra solo (sin navegar a mano) y el inicio pide el nombre la primera vez.
     await user.type(await screen.findByLabelText("¿Cómo te llamas?"), "Abuela Carmen");
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     await screen.findByText(/Entra más fácil|Hola, Abuela Carmen/);

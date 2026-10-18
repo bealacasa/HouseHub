@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, Navigate, useNavigate } from "react-router";
 import { ErrorMessage, buttonPrimary, buttonSecondary, inputClass } from "@/components/ui";
-import { passkeysSupported, sendCode, signInWithPasskey, verifyCode } from "./auth";
+import { passkeysSupported, sendCode, signInWithPasskey, useSession, verifyCode } from "./auth";
 
 /**
  * Entrar: 1) escribe tu correo, 2) teclea el código de 6 números que te llega.
@@ -13,6 +13,10 @@ export function LoginPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
+  const { session } = useSession();
+  // Al entrar (código o huella), al inicio. Si ya había sesión, directamente.
+  const goHome = () => navigate("/", { replace: true });
 
   async function run(action: () => Promise<{ ok: boolean; error?: string }>, onOk?: () => void) {
     setBusy(true);
@@ -22,6 +26,8 @@ export function LoginPage() {
     if (!result.ok) setError(result.error ?? "Algo ha fallado. Inténtalo de nuevo.");
     else onOk?.();
   }
+
+  if (session) return <Navigate to="/" replace />;
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[calc(2rem+env(safe-area-inset-top))]">
@@ -67,7 +73,7 @@ export function LoginPage() {
             <button
               type="button"
               disabled={busy}
-              onClick={() => void run(signInWithPasskey)}
+              onClick={() => void run(signInWithPasskey, goHome)}
               className={buttonSecondary}
             >
               Entrar con mi cara o huella
@@ -80,7 +86,7 @@ export function LoginPage() {
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            void run(() => verifyCode(email, code));
+            void run(() => verifyCode(email, code), goHome);
           }}
         >
           <p className="text-xl">
