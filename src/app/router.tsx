@@ -75,6 +75,28 @@ export const router = createBrowserRouter([
         lazy: async () => ({ Component: (await import("@/pages/MorePage")).MorePage }),
       },
       {
+        path: "notas",
+        lazy: async () => ({ Component: (await import("@/features/notes/NotesPage")).NotesPage }),
+      },
+      {
+        path: "eventos",
+        lazy: async () => ({
+          Component: (await import("@/features/events/EventsPage")).EventsPage,
+        }),
+      },
+      {
+        path: "eventos/nuevo",
+        lazy: async () => ({
+          Component: (await import("@/features/events/EventFormPage")).EventFormPage,
+        }),
+      },
+      {
+        path: "eventos/:id",
+        lazy: async () => ({
+          Component: (await import("@/features/events/EventFormPage")).EventFormPage,
+        }),
+      },
+      {
         path: "casa",
         lazy: async () => ({
           Component: (await import("@/features/house/HouseSettingsPage")).HouseSettingsPage,

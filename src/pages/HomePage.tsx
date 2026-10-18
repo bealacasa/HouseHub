@@ -9,6 +9,7 @@ import { StayCard } from "@/features/calendar/CalendarPage";
 import { staysOn, toKey, useStays } from "@/features/calendar/stays";
 import { useHouse } from "@/features/house/HouseGate";
 import { useHousePhotoUrl } from "@/features/house/photo";
+import { useNotes } from "@/features/notes/notes";
 import { InstallCard } from "@/pwa/InstallCard";
 
 /** Inicio. En las próximas fases: «Llego / Me voy», avisos y saldo. */
@@ -58,6 +59,7 @@ export function HomePage() {
           </Card>
         )}
         <WhoIsGoing />
+        <PendingNotes />
         {house.notes && (
           <Card>
             <h2 className="text-2xl font-bold">📝 Notas de la casa</h2>
@@ -119,5 +121,37 @@ function WhoIsGoing() {
         Ver el calendario
       </Link>
     </section>
+  );
+}
+
+/** Notas pendientes («falta aceite»…), las 3 últimas. */
+function PendingNotes() {
+  const notes = useNotes();
+  const pending = (notes.data ?? []).filter((n) => !n.done);
+  if (!notes.isSuccess) return null;
+  return (
+    <Card>
+      <h2 className="text-2xl font-bold">
+        Notas de la casa{" "}
+        {pending.length > 0 && <span className="text-muted">({pending.length})</span>}
+      </h2>
+      {pending.length === 0 ? (
+        <p className="mt-2 text-lg text-muted">No hay nada pendiente.</p>
+      ) : (
+        <ul className="mt-3 space-y-2 text-lg">
+          {pending.slice(0, 3).map((n) => (
+            <li key={n.id} className="flex gap-2">
+              <span aria-hidden="true" className="text-accent">
+                •
+              </span>
+              {n.text}
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link to="/notas" className={`${buttonSecondary} mt-4`}>
+        {pending.length > 0 ? "Ver y tachar" : "Añadir una nota"}
+      </Link>
+    </Card>
   );
 }

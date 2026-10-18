@@ -1,8 +1,27 @@
 import { Link } from "react-router";
-import { HomeIcon, LockIcon, UserIcon, UsersIcon } from "@/components/icons";
+import {
+  CalendarIcon,
+  HomeIcon,
+  ListIcon,
+  LockIcon,
+  UserIcon,
+  UsersIcon,
+} from "@/components/icons";
 import { PageTitle, cardShadow } from "@/components/ui";
 
 const ITEMS = [
+  {
+    to: "/notas",
+    Icon: ListIcon,
+    label: "Notas de la casa",
+    hint: "Lo que falta o hay que recordar",
+  },
+  {
+    to: "/eventos",
+    Icon: CalendarIcon,
+    label: "Eventos del pueblo",
+    hint: "Fiestas, mercado, procesiones…",
+  },
   { to: "/casa", Icon: HomeIcon, label: "La casa", hint: "Nombre, dirección, foto y notas" },
   { to: "/familia", Icon: UsersIcon, label: "La familia", hint: "Quién está e invitar a alguien" },
   { to: "/ajustes", Icon: UserIcon, label: "Mi cuenta", hint: "Tu foto, nombre, cara o huella" },

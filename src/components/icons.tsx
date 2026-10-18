@@ -68,3 +68,9 @@ export const LockIcon = (p: IconProps) => (
     <path d="M8 10V7a4 4 0 0 1 8 0v3" />
   </Svg>
 );
+
+export const ListIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="m4 7 2 2 3-3M4 15l2 2 3-3M12 8h8M12 16h8" />
+  </Svg>
+);

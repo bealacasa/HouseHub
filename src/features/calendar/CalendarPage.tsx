@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Avatar, memberColor } from "@/components/Avatar";
 import { Card, ErrorMessage, PageTitle, buttonPrimary, cardShadow } from "@/components/ui";
+import { EventCard } from "@/features/events/EventsPage";
+import { eventsOn, useEvents, type VillageEvent } from "@/features/events/events";
 import { useHouse } from "@/features/house/HouseGate";
 import type { Member } from "@/features/house/house";
 import {
@@ -25,6 +27,8 @@ const WEEKDAY_NAMES = ["lunes", "martes", "miércoles", "jueves", "viernes", "s�
 export function CalendarPage() {
   const { members } = useHouse();
   const stays = useStays();
+  const events = useEvents();
+  const allEvents = events.data ?? [];
   const [params, setParams] = useSearchParams();
   const today = toKey(new Date());
   const selected = params.get("dia") ?? today;
@@ -83,6 +87,7 @@ export function CalendarPage() {
                   isToday={toKey(date) === today}
                   isSelected={toKey(date) === selected}
                   stays={staysOn(all, toKey(date))}
+                  events={eventsOn(allEvents, toKey(date))}
                   lanes={lanes}
                   members={members}
                   onSelect={select}
@@ -98,11 +103,26 @@ export function CalendarPage() {
         <h2 id="dia-elegido" className="mb-3 text-2xl font-bold first-letter:uppercase">
           {longDate(selected)}
         </h2>
+        {eventsOn(allEvents, selected).length > 0 && (
+          <ul className="mb-3 space-y-3">
+            {eventsOn(allEvents, selected).map((e) => (
+              <li key={e.id}>
+                <EventCard event={e} />
+              </li>
+            ))}
+          </ul>
+        )}
         <StayList
           stays={staysOn(all, selected)}
           members={members}
           empty="La casa está libre ese día."
         />
+        <Link
+          to={`/eventos/nuevo?dia=${selected}`}
+          className="mt-3 inline-flex min-h-12 items-center text-lg font-semibold text-accent underline"
+        >
+          + Añadir un evento del pueblo este día
+        </Link>
       </section>
 
       <section className="mt-8" aria-labelledby="proximas">
@@ -157,6 +177,7 @@ function DayCell({
   isToday,
   isSelected,
   stays,
+  events,
   lanes,
   members,
   onSelect,
@@ -166,6 +187,7 @@ function DayCell({
   isToday: boolean;
   isSelected: boolean;
   stays: Stay[];
+  events: VillageEvent[];
   lanes: Map<string, number>;
   members: readonly Member[];
   onSelect: (day: DateKey) => void;
@@ -185,7 +207,9 @@ function DayCell({
       role="gridcell"
       onClick={() => onSelect(key)}
       aria-selected={isSelected}
-      aria-label={`${longDate(key)}${isToday ? ", hoy" : ""}${who ? `: va ${who}` : ": libre"}`}
+      aria-label={`${longDate(key)}${isToday ? ", hoy" : ""}${who ? `: va ${who}` : ": libre"}${
+        events.length > 0 ? `. Evento: ${events.map((e) => e.title).join(", ")}` : ""
+      }`}
       className={`flex min-h-[4.25rem] flex-col items-stretch pt-1 ${inMonth ? "" : "opacity-45"}`}
     >
       <span
@@ -198,6 +222,10 @@ function DayCell({
         }`}
       >
         {date.getDate()}
+      </span>
+      {/* Evento del pueblo: estrella ámbar (distinta de las barras de reservas). */}
+      <span aria-hidden="true" className="h-4 text-center text-sm leading-4 text-amber-600">
+        {events.length > 0 ? "★" : ""}
       </span>
       {/* Barras de reserva: continuas de un día a otro, redondeadas al empezar y acabar. */}
       <span className="mt-1 flex flex-col gap-0.5" aria-hidden="true">

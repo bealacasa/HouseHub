@@ -52,6 +52,8 @@ export function installFakeSupabase(
     house_members: [],
     invitations: [],
     stays: [],
+    house_notes: [],
+    village_events: [],
   };
   const uid = () => crypto.randomUUID();
   const ok = (data: unknown) => ({ data, error: null });
@@ -151,7 +153,15 @@ export function installFakeSupabase(
       return {
         select: () => query(table),
         insert: async (row: Row) => {
-          rows(table).push({ id: uid(), user_id: null, ...row });
+          // Valores por defecto como en Postgres (las columnas que sobran se ignoran).
+          rows(table).push({
+            id: uid(),
+            user_id: null,
+            done_at: null,
+            created_by: user.id,
+            created_at: new Date().toISOString(),
+            ...row,
+          });
           return { error: null };
         },
         update: (changes: Row) => ({
