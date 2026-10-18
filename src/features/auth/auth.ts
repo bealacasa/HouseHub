@@ -118,6 +118,14 @@ export async function signInWithPasskey(): Promise<AuthResult> {
     () => getSupabase().auth.signInWithPasskey(),
     "No se pudo entrar con la cara o la huella. Usa el código.",
   );
+  // NotAllowedError: se canceló o en este móvil no hay cara/huella guardada para la app.
+  if (!result.ok && /NotAllowed/i.test(result.error)) {
+    return {
+      ok: false,
+      error:
+        "En este móvil todavía no está activada la cara o la huella (o se canceló). Entra con el código y actívala en Más → Mi cuenta.",
+    };
+  }
   // Si ya entra con la cara o huella, no hace falta ofrecérselo.
   if (result.ok) {
     try {
