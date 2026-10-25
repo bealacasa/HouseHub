@@ -123,6 +123,30 @@ export const router = createBrowserRouter([
         }),
       },
       {
+        path: "excursiones",
+        lazy: async () => ({
+          Component: (await import("@/features/excursions/ExcursionsPage")).ExcursionsPage,
+        }),
+      },
+      {
+        path: "excursiones/nueva",
+        lazy: async () => ({
+          Component: (await import("@/features/excursions/ExcursionFormPage")).ExcursionFormPage,
+        }),
+      },
+      {
+        path: "excursiones/:id",
+        lazy: async () => ({
+          Component: (await import("@/features/excursions/ExcursionPage")).ExcursionPage,
+        }),
+      },
+      {
+        path: "excursiones/:id/editar",
+        lazy: async () => ({
+          Component: (await import("@/features/excursions/ExcursionFormPage")).ExcursionFormPage,
+        }),
+      },
+      {
         path: "casa",
         lazy: async () => ({
           Component: (await import("@/features/house/HouseSettingsPage")).HouseSettingsPage,

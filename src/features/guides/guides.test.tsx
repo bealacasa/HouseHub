@@ -68,6 +68,7 @@ describe("menú Más", () => {
       "Instrucciones",
       "Notas",
       "Eventos del pueblo",
+      "Excursiones",
       "La familia",
       "La casa",
       "Mi cuenta",

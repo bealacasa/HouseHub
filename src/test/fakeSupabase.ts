@@ -58,6 +58,7 @@ export function installFakeSupabase(
     expenses: [],
     settlements: [],
     recurring_expenses: [],
+    excursions: [],
   };
   const uid = () => crypto.randomUUID();
   const ok = (data: unknown) => ({ data, error: null });
@@ -192,6 +193,11 @@ export function installFakeSupabase(
       });
       return ok(null);
     }
+    if (fn === "mark_excursion_visited") {
+      const excursion = tables.excursions!.find((x) => x.id === args.p_excursion);
+      if (excursion) excursion.last_visited = args.p_date;
+      return ok(null);
+    }
     throw new Error(`rpc no simulada: ${fn}`);
   });
 
@@ -209,6 +215,7 @@ export function installFakeSupabase(
             id: uid(),
             user_id: null,
             done_at: null,
+            last_visited: null,
             created_by: user.id,
             created_at: new Date().toISOString(),
             ...row,

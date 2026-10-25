@@ -80,3 +80,9 @@ export const BookIcon = (p: IconProps) => (
     <path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5ZM4 19a2 2 0 0 1 2-2h13M8 7h7M8 11h5" />
   </Svg>
 );
+
+export const MapIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2V6ZM9 4v14M15 6v14" />
+  </Svg>
+);

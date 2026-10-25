@@ -5,6 +5,7 @@ import {
   HomeIcon,
   ListIcon,
   LockIcon,
+  MapIcon,
   UserIcon,
   UsersIcon,
 } from "@/components/icons";
@@ -32,6 +33,13 @@ const ITEMS = [
     label: "Eventos del pueblo",
     hint: "Fiestas, mercado",
     tint: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200",
+  },
+  {
+    to: "/excursiones",
+    Icon: MapIcon,
+    label: "Excursiones",
+    hint: "Sitios cerca",
+    tint: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-200",
   },
   {
     to: "/familia",
