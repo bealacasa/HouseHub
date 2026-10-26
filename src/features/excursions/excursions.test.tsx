@@ -96,4 +96,29 @@ describe("excursiones", () => {
     expect(await screen.findByText("Escribe a dónde es la excursión.")).toBeTruthy();
     expect(fake.tables.excursions).toHaveLength(0);
   });
+
+  it("si falta el SQL en Supabase, avisa con calma y no deja añadir", async () => {
+    installFakeSupabase({
+      signedIn: true,
+      name: "Ana",
+      house: "Casa",
+      missingTables: ["excursions"],
+    });
+    renderAt("/excursiones");
+    expect(await screen.findByText(/aún no están activadas/)).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Añadir una excursión/ })).toBeNull();
+    expect(screen.queryByText("No se han podido cargar las excursiones.")).toBeNull();
+  });
+
+  it("si falta el SQL, el formulario tampoco se abre", async () => {
+    installFakeSupabase({
+      signedIn: true,
+      name: "Ana",
+      house: "Casa",
+      missingTables: ["excursions"],
+    });
+    renderAt("/excursiones/nueva");
+    expect(await screen.findByText(/aún no están activadas/)).toBeTruthy();
+    expect(screen.queryByLabelText("¿A dónde?")).toBeNull();
+  });
 });

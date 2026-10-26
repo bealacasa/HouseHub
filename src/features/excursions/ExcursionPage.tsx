@@ -14,11 +14,13 @@ import { errorMessage } from "@/features/house/house";
 import {
   DIFFICULTIES,
   DURATIONS,
+  ExcursionsNotReadyError,
   lastVisitedLabel,
   useExcursionPhotoUrl,
   useExcursions,
   useMarkVisited,
 } from "./excursions";
+import { ExcursionsNotReady } from "./NotReady";
 
 /** Ver una excursión: foto grande, lo esencial con palabras, el mapa y «Hoy hemos ido». */
 export function ExcursionPage() {
@@ -29,6 +31,14 @@ export function ExcursionPage() {
   const excursion = (excursions.data ?? []).find((x) => x.id === id);
   const photo = useExcursionPhotoUrl(excursion?.photo ?? null);
   if (excursions.isPending) return null;
+  if (excursions.error instanceof ExcursionsNotReadyError) {
+    return (
+      <>
+        <PageTitle title="Excursiones" />
+        <ExcursionsNotReady />
+      </>
+    );
+  }
   if (!excursion) {
     return (
       <>

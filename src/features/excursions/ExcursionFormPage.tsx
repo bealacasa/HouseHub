@@ -16,6 +16,7 @@ import { ImageError } from "@/lib/image";
 import {
   DIFFICULTIES,
   DURATIONS,
+  ExcursionsNotReadyError,
   excursionInputSchema,
   uploadExcursionPhoto,
   useDeleteExcursion,
@@ -26,12 +27,21 @@ import {
   type Duration,
   type Excursion,
 } from "./excursions";
+import { ExcursionsNotReady } from "./NotReady";
 
 /** Añadir (/excursiones/nueva) o cambiar (/excursiones/:id/editar) una excursión. */
 export function ExcursionFormPage() {
   const { id } = useParams();
   const excursions = useExcursions();
   if (excursions.isPending) return null;
+  if (excursions.error instanceof ExcursionsNotReadyError) {
+    return (
+      <>
+        <PageTitle title="Excursiones" />
+        <ExcursionsNotReady />
+      </>
+    );
+  }
   const excursion = id ? (excursions.data ?? []).find((x) => x.id === id) : undefined;
   if (id && !excursion) {
     return (

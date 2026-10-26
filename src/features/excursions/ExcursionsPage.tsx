@@ -5,30 +5,39 @@ import { toKey } from "@/features/calendar/stays";
 import {
   DIFFICULTIES,
   DURATIONS,
+  ExcursionsNotReadyError,
   lastVisitedLabel,
   useExcursionPhotoUrl,
   useExcursions,
   type Excursion,
 } from "./excursions";
+import { ExcursionsNotReady } from "./NotReady";
 
 /** Excursiones cerca de la casa: cascadas, miradores, pueblos de al lado… */
 export function ExcursionsPage() {
   const excursions = useExcursions();
   const all = excursions.data ?? [];
   const today = toKey(new Date());
+  const notReady = excursions.error instanceof ExcursionsNotReadyError;
   return (
     <>
       <Link to="/mas" className={backLink}>
         ← Más
       </Link>
       <PageTitle title="Excursiones" subtitle="Sitios bonitos cerca de la casa." />
-      <Link to="/excursiones/nueva" className={`${buttonPrimary} mb-6`}>
-        <span aria-hidden="true" className="text-2xl leading-none">
-          +
-        </span>
-        Añadir una excursión
-      </Link>
-      {excursions.isError && <ErrorMessage>No se han podido cargar las excursiones.</ErrorMessage>}
+      {notReady ? (
+        <ExcursionsNotReady />
+      ) : (
+        <Link to="/excursiones/nueva" className={`${buttonPrimary} mb-6`}>
+          <span aria-hidden="true" className="text-2xl leading-none">
+            +
+          </span>
+          Añadir una excursión
+        </Link>
+      )}
+      {excursions.isError && !notReady && (
+        <ErrorMessage>No se han podido cargar las excursiones.</ErrorMessage>
+      )}
       {excursions.isSuccess && all.length === 0 && (
         <p className="rounded-3xl border-2 border-dashed border-border p-5 text-center text-lg text-muted">
           Aún no hay excursiones. Por ejemplo: «Cascada del Molino».

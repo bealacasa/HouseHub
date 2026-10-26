@@ -73,9 +73,30 @@ const excursionRow = z.object({
 
 export const excursionsKey = ["excursions"] as const;
 
+/**
+ * Falta ejecutar la migración de excursiones en Supabase (la tabla o la función no
+ * existen). La app sigue funcionando; esta sección enseña un aviso en vez de un error.
+ */
+export class ExcursionsNotReadyError extends Error {
+  constructor() {
+    super("Las excursiones aún no están activadas.");
+  }
+}
+
+/** PostgREST: tabla (PGRST205) o función (PGRST202) que no existe; Postgres: 42P01. */
+export function isMissingInDatabase(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === "PGRST205" || code === "PGRST202" || code === "42P01";
+}
+
+const notReadyOr = (error: unknown) =>
+  isMissingInDatabase(error) ? new ExcursionsNotReadyError() : error;
+
 export function useExcursions() {
   return useQuery({
     queryKey: excursionsKey,
+    // Si falta la migración, no tiene sentido reintentar.
+    retry: (count, error) => !(error instanceof ExcursionsNotReadyError) && count < 2,
     queryFn: async (): Promise<Excursion[]> => {
       const { data, error } = await getSupabase()
         .from("excursions")
@@ -83,7 +104,7 @@ export function useExcursions() {
           "id, title, description, getting_there, duration, difficulty, map_url, photo_path, last_visited, created_by",
         )
         .order("title");
-      if (error) throw error;
+      if (error) throw notReadyOr(error);
       return (data ?? [])
         .map((raw) => {
           const r = excursionRow.parse(raw);
@@ -122,7 +143,7 @@ export function useSaveExcursion(houseId: string) {
       const supabase = getSupabase();
       if (id) {
         const { error } = await supabase.from("excursions").update(row).eq("id", id);
-        if (error) throw error;
+        if (error) throw notReadyOr(error);
         return id;
       }
       const { data, error } = await supabase
@@ -130,7 +151,7 @@ export function useSaveExcursion(houseId: string) {
         .insert({ house_id: houseId, ...row })
         .select("id")
         .single();
-      if (error) throw error;
+      if (error) throw notReadyOr(error);
       return z.object({ id: z.uuid() }).parse(data).id;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: excursionsKey }),
@@ -146,7 +167,7 @@ export function useMarkVisited() {
         p_excursion: id,
         p_date: date,
       });
-      if (error) throw error;
+      if (error) throw notReadyOr(error);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: excursionsKey }),
   });

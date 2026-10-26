@@ -11,7 +11,13 @@ type Profile = { id: string; display_name: string };
  * Nunca se usa el proyecto real en los tests unitarios.
  */
 export function installFakeSupabase(
-  options: { signedIn?: boolean; name?: string; house?: string } = {},
+  options: {
+    signedIn?: boolean;
+    name?: string;
+    house?: string;
+    /** Tablas sin crear (migración sin ejecutar): responden como PostgREST, PGRST205. */
+    missingTables?: string[];
+  } = {},
 ) {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "ana@example.com" };
   let session = options.signedIn ? { user, access_token: "t" } : null;
@@ -206,6 +212,16 @@ export function installFakeSupabase(
   };
 
   const from = (table: string) => {
+    if (options.missingTables?.includes(table)) {
+      const missing = { data: null, error: { code: "PGRST205", message: "table not found" } };
+      const builder: Record<string, unknown> = {
+        then: <T>(resolve: (v: typeof missing) => T) => Promise.resolve(missing).then(resolve),
+        single: async () => missing,
+      };
+      for (const m of ["select", "eq", "gte", "order", "limit", "insert", "update", "delete"])
+        builder[m] = () => builder;
+      return builder;
+    }
     if (table !== "profiles") {
       return {
         select: () => query(table),
