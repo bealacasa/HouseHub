@@ -13,6 +13,7 @@ import { useNotes } from "@/features/notes/notes";
 import { MyBalance } from "@/features/expenses/ExpensesPage";
 import { useLedger } from "@/features/expenses/expenses";
 import { balances } from "@/features/expenses/money";
+import { currentSeason } from "@/lib/season";
 import { InstallCard } from "@/pwa/InstallCard";
 
 /** Inicio. En las próximas fases: «Llego / Me voy», avisos y saldo. */
@@ -21,6 +22,7 @@ export function HomePage() {
   const { house, members, isAdmin } = useHouse();
   const photo = useHousePhotoUrl(house.photoPath);
   const onlyMe = members.length === 1;
+  const halloween = currentSeason() === "halloween";
 
   return (
     <>
@@ -44,7 +46,18 @@ export function HomePage() {
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight">
             Hola, {profile.displayName}
           </h1>
+          {halloween && (
+            <p className="mt-2 text-xl font-bold">
+              <span aria-hidden="true">🎃 </span>¡Feliz Halloween!
+            </p>
+          )}
         </div>
+        {/* Adorno de temporada (solo decoración). */}
+        {halloween && (
+          <span aria-hidden="true" className="absolute right-4 top-3 text-3xl">
+            🦇
+          </span>
+        )}
       </header>
       <QuickActions />
       <div className="mt-6 space-y-5">

@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router";
 import { CalendarIcon, EuroIcon, HomeIcon, MoreIcon } from "@/components/icons";
 import { useHouse } from "@/features/house/HouseGate";
+import { currentSeason } from "@/lib/season";
 import { UpdatePrompt } from "@/pwa/UpdatePrompt";
 
 /** Cuatro pestañas, siempre con texto (nunca solo iconos). */
@@ -22,7 +23,11 @@ export function Layout() {
             aria-hidden="true"
             className="grid size-10 place-items-center rounded-2xl bg-linear-to-br from-accent to-accent-2 text-accent-contrast shadow-md shadow-accent/25"
           >
-            <HomeIcon className="size-6" />
+            {currentSeason() === "halloween" ? (
+              <span className="text-2xl leading-none">🎃</span>
+            ) : (
+              <HomeIcon className="size-6" />
+            )}
           </span>
           <span className="truncate">{house.name}</span>
         </p>
