@@ -33,8 +33,8 @@ export function FamilyPage() {
   const { house, members, me, isAdmin } = useHouse();
   return (
     <>
-      <Link to="/mas" className={backLink}>
-        ← Más
+      <Link to="/cuenta" className={backLink}>
+        ← Familia y ajustes
       </Link>
       <PageTitle title="La familia" subtitle={`Quién está en ${house.name}.`} />
       <div className="space-y-4">

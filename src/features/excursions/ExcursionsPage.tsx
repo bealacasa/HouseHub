@@ -21,8 +21,8 @@ export function ExcursionsPage() {
   const notReady = excursions.error instanceof ExcursionsNotReadyError;
   return (
     <>
-      <Link to="/mas" className={backLink}>
-        ← Más
+      <Link to="/pueblo" className={backLink}>
+        ← Pueblo
       </Link>
       <PageTitle title="Excursiones" subtitle="Sitios bonitos cerca de la casa." />
       {notReady ? (

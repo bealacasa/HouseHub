@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { Navigate, createBrowserRouter } from "react-router";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { HouseGate } from "@/features/house/HouseGate";
 import { HomePage } from "@/pages/HomePage";
@@ -74,9 +74,15 @@ export const router = createBrowserRouter([
           Component: (await import("@/features/expenses/ExpenseFormPage")).ExpenseFormPage,
         }),
       },
+      // Antes había una pestaña «Más»: su contenido está ahora en Casa, Pueblo y Ajustes.
+      { path: "mas", element: <Navigate to="/" replace /> },
       {
-        path: "mas",
-        lazy: async () => ({ Component: (await import("@/pages/MorePage")).MorePage }),
+        path: "pueblo",
+        lazy: async () => ({ Component: (await import("@/pages/PuebloPage")).PuebloPage }),
+      },
+      {
+        path: "cuenta",
+        lazy: async () => ({ Component: (await import("@/pages/AccountPage")).AccountPage }),
       },
       {
         path: "instrucciones",
@@ -148,6 +154,10 @@ export const router = createBrowserRouter([
       },
       {
         path: "casa",
+        lazy: async () => ({ Component: (await import("@/pages/CasaPage")).CasaPage }),
+      },
+      {
+        path: "casa/datos",
         lazy: async () => ({
           Component: (await import("@/features/house/HouseSettingsPage")).HouseSettingsPage,
         }),

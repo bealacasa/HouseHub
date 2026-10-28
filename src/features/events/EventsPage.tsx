@@ -17,8 +17,8 @@ export function EventsPage() {
 
   return (
     <>
-      <Link to="/mas" className={backLink}>
-        ← Más
+      <Link to="/pueblo" className={backLink}>
+        ← Pueblo
       </Link>
       <PageTitle title="Eventos del pueblo" subtitle="Fiestas, mercado, procesiones…" />
       <Link to="/eventos/nuevo" className={`${buttonPrimary} mb-6`}>

@@ -12,8 +12,8 @@ export function ExcursionsNotReady() {
         Las excursiones aún no están activadas. Quien administra la casa tiene que terminar de
         prepararlas.
       </p>
-      <Link to="/mas" className={`${buttonSecondary} mt-4`}>
-        Volver a Más
+      <Link to="/pueblo" className={`${buttonSecondary} mt-4`}>
+        Volver a Pueblo
       </Link>
     </Card>
   );

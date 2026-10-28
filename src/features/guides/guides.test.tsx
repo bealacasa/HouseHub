@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -60,20 +60,33 @@ describe("instrucciones", () => {
   });
 });
 
-describe("menú Más", () => {
-  it("enseña todas las secciones, también las instrucciones", async () => {
+describe("pestañas Casa y Pueblo, y Familia y ajustes", () => {
+  it("cada sección está en su sitio y la pestaña se marca también dentro", async () => {
     installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
-    renderAt("/mas");
-    for (const name of [
-      "Instrucciones",
-      "Notas",
-      "Eventos del pueblo",
-      "Excursiones",
-      "La familia",
-      "La casa",
-      "Mi cuenta",
-    ]) {
+    const user = userEvent.setup();
+    const memory = renderAt("/casa");
+    for (const name of ["Instrucciones", "Notas", "Datos de la casa"]) {
       expect(await screen.findByRole("link", { name: new RegExp(name) })).toBeTruthy();
     }
+    await user.click(screen.getByRole("link", { name: /Instrucciones/ }));
+    await vi.waitFor(() => expect(memory.state.location.pathname).toBe("/instrucciones"));
+    const nav = screen.getByRole("navigation", { name: "Secciones" });
+    expect(nav.querySelector('[aria-current="page"]')?.textContent).toBe("Casa");
+
+    await user.click(within(nav).getByRole("link", { name: "Pueblo" }));
+    for (const name of ["Eventos del pueblo", "Excursiones"]) {
+      expect(await screen.findByRole("link", { name: new RegExp(name) })).toBeTruthy();
+    }
+
+    await user.click(screen.getByRole("link", { name: /Ajustes/ }));
+    for (const name of ["La familia", "Mi cuenta", "Privacidad"]) {
+      expect(await screen.findByRole("link", { name: new RegExp(name) })).toBeTruthy();
+    }
+  });
+
+  it("la antigua «Más» lleva al inicio", async () => {
+    installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    const memory = renderAt("/mas");
+    await vi.waitFor(() => expect(memory.state.location.pathname).toBe("/"));
   });
 });

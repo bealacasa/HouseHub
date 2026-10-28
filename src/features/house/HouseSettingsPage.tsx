@@ -21,8 +21,8 @@ export function HouseSettingsPage() {
   const { house, isAdmin } = useHouse();
   return (
     <>
-      <Link to="/mas" className={backLink}>
-        ← Más
+      <Link to="/casa" className={backLink}>
+        ← Casa
       </Link>
       <PageTitle title="La casa" />
       <div className="space-y-4">

@@ -42,7 +42,7 @@ describe("acceso a la app", () => {
     expect(fake.profiles.get(fake.user.id)?.display_name).toBe("Abuela Carmen");
   });
 
-  it("con sesión y nombre, muestra el inicio y las 4 pestañas con texto", async () => {
+  it("con sesión y nombre, muestra el inicio y las 5 pestañas con texto", async () => {
     installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa del pueblo" });
     localStorage.setItem("househub:passkey-asked", "1");
     renderAt("/");
@@ -52,8 +52,11 @@ describe("acceso a la app", () => {
       "Inicio",
       "Calendario",
       "Gastos",
-      "Más",
+      "Casa",
+      "Pueblo",
     ]);
+    expect(nav.querySelector('[aria-current="page"]')?.textContent).toBe("Inicio");
+    expect(screen.getByRole("link", { name: /Ajustes/ }).getAttribute("href")).toBe("/cuenta");
   });
 
   it("cerrar sesión en todos los dispositivos pide confirmación", async () => {

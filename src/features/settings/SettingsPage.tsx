@@ -35,8 +35,8 @@ export function SettingsPage() {
 
   return (
     <>
-      <Link to="/mas" className={backLink}>
-        ← Más
+      <Link to="/cuenta" className={backLink}>
+        ← Familia y ajustes
       </Link>
       <PageTitle title="Mi cuenta" subtitle={session.user.email ?? undefined} />
       <div className="space-y-4">

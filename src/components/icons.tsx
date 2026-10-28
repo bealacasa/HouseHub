@@ -86,3 +86,10 @@ export const MapIcon = (p: IconProps) => (
     <path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2V6ZM9 4v14M15 6v14" />
   </Svg>
 );
+
+export const KeyIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="8" cy="15" r="4.5" />
+    <path d="m11.2 11.8 8.3-8.3M16.5 6.5l2.5 2.5M14 9l2 2" />
+  </Svg>
+);

@@ -9,8 +9,8 @@ export function GuidesPage() {
   const all = guides.data ?? [];
   return (
     <>
-      <Link to="/mas" className={backLink}>
-        ← Más
+      <Link to="/casa" className={backLink}>
+        ← Casa
       </Link>
       <PageTitle title="Instrucciones" subtitle="Cómo funcionan las cosas de la casa." />
       <Link to="/instrucciones/nueva" className={`${buttonPrimary} mb-6`}>

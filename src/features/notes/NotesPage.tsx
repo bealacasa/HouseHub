@@ -37,8 +37,8 @@ export function NotesPage() {
 
   return (
     <>
-      <Link to="/mas" className={backLink}>
-        ← Más
+      <Link to="/casa" className={backLink}>
+        ← Casa
       </Link>
       <PageTitle title="Notas de la casa" subtitle="Lo que falta o hay que recordar." />
 
