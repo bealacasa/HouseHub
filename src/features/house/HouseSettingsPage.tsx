@@ -34,16 +34,6 @@ export function HouseSettingsPage() {
             <h2 className="text-2xl font-bold">{house.name}</h2>
             {house.address && <p className="mt-2 text-lg">{house.address}</p>}
             {house.notes && <p className="mt-3 whitespace-pre-line text-lg">{house.notes}</p>}
-            {house.thermostatUrl && (
-              <a
-                href={house.thermostatUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${buttonSecondary} mt-4`}
-              >
-                Abrir la app del termostato
-              </a>
-            )}
           </Card>
         )}
       </div>
@@ -110,7 +100,6 @@ function HouseForm() {
   const [name, setName] = useState(house.name);
   const [address, setAddress] = useState(house.address);
   const [notes, setNotes] = useState(house.notes);
-  const [thermostatUrl, setThermostatUrl] = useState(house.thermostatUrl ?? "");
   const update = useUpdateHouse(house.id);
 
   return (
@@ -120,7 +109,7 @@ function HouseForm() {
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          update.mutate({ name, address, notes, thermostatUrl });
+          update.mutate({ name, address, notes });
         }}
       >
         <Field id="h-name" label="Nombre">
@@ -153,18 +142,6 @@ function HouseForm() {
             className={`${inputClass} py-3`}
           />
           <PrivacyHint id="h-notes-hint" />
-        </Field>
-        <Field id="h-thermo" label="Enlace a la app del termostato (opcional)">
-          <input
-            id="h-thermo"
-            type="url"
-            inputMode="url"
-            autoCapitalize="none"
-            placeholder="https://…"
-            value={thermostatUrl}
-            onChange={(e) => setThermostatUrl(e.target.value)}
-            className={inputClass}
-          />
         </Field>
         {update.isError && <ErrorMessage>{errorMessage(update.error)}</ErrorMessage>}
         {update.isSuccess && <SuccessMessage>Guardado.</SuccessMessage>}

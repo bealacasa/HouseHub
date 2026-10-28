@@ -103,7 +103,6 @@ export function installFakeSupabase(
       address: "",
       notes: "",
       photo_path: null,
-      thermostat_url: null,
     });
     tables.house_members!.push({
       id: "22222222-2222-4222-8222-222222222222",
@@ -130,7 +129,6 @@ export function installFakeSupabase(
         address: "",
         notes: "",
         photo_path: null,
-        thermostat_url: null,
       });
       tables.house_members!.push({
         id: uid(),

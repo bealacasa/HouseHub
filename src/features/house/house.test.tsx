@@ -47,15 +47,9 @@ describe("la casa", () => {
     expect(await screen.findByRole("heading", { name: "Necesitas una invitación" })).toBeTruthy();
   });
 
-  it("valida los datos de la casa (enlace del termostato solo https)", () => {
+  it("valida los datos de la casa", () => {
     const base = { name: "Casa", address: "", notes: "" };
-    expect(houseInputSchema.safeParse({ ...base, thermostatUrl: "" }).success).toBe(true);
-    expect(
-      houseInputSchema.safeParse({ ...base, thermostatUrl: "https://app.tado.com" }).success,
-    ).toBe(true);
-    expect(
-      houseInputSchema.safeParse({ ...base, thermostatUrl: "javascript:alert(1)" }).success,
-    ).toBe(false);
+    expect(houseInputSchema.safeParse(base).success).toBe(true);
     expect(houseInputSchema.safeParse({ ...base, name: " " }).success).toBe(false);
   });
 });

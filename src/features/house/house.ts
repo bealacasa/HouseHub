@@ -16,7 +16,6 @@ export type House = {
   address: string;
   notes: string;
   photoPath: string | null;
-  thermostatUrl: string | null;
 };
 
 export type Member = {
@@ -44,7 +43,6 @@ const houseRow = z.object({
   address: z.string(),
   notes: z.string(),
   photo_path: z.string().nullable(),
-  thermostat_url: z.string().nullable(),
 });
 
 const memberRow = z.object({
@@ -73,11 +71,6 @@ export const houseInputSchema = z.object({
   name: z.string().trim().min(1, "Ponle un nombre a la casa.").max(80, "Máximo 80 letras."),
   address: z.string().trim().max(200, "Máximo 200 letras."),
   notes: z.string().trim().max(2000, "Máximo 2000 letras."),
-  thermostatUrl: z
-    .string()
-    .trim()
-    .max(300)
-    .refine((v) => v === "" || /^https:\/\/\S+$/.test(v), "El enlace debe empezar por https://"),
 });
 export type HouseInput = z.input<typeof houseInputSchema>;
 
@@ -107,7 +100,6 @@ function toHouse(raw: unknown): House {
     address: r.address,
     notes: r.notes,
     photoPath: r.photo_path,
-    thermostatUrl: r.thermostat_url,
   };
 }
 
@@ -126,7 +118,7 @@ export async function fetchHouseState(userId: string): Promise<HouseState> {
   const supabase = getSupabase();
   const { data: houses, error } = await supabase
     .from("houses")
-    .select("id, name, address, notes, photo_path, thermostat_url")
+    .select("id, name, address, notes, photo_path")
     .limit(1);
   if (error) throw error;
   const house = houses?.[0];
@@ -183,7 +175,6 @@ export function useUpdateHouse(houseId: string) {
         name: data.name,
         address: data.address,
         notes: data.notes,
-        thermostat_url: data.thermostatUrl || null,
       })
       .eq("id", houseId);
     if (error) throw error;
