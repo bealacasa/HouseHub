@@ -27,8 +27,8 @@ const valid = {
   duration: "medio",
   difficulty: "facil",
   mapUrl: "",
-  photo: null,
-} as const;
+  photos: [],
+};
 
 describe("excursiones", () => {
   it("validan el nombre y que el enlace al mapa sea https", () => {
@@ -75,6 +75,7 @@ describe("excursiones", () => {
       difficulty: "media",
       map_url: "https://maps.app.goo.gl/abc",
       photo_path: null,
+      photos: [],
     });
     await vi.waitFor(() => expect(memory.state.location.pathname).toMatch(/^\/excursiones\/.+/));
     expect(await screen.findByRole("heading", { name: "Mirador de la Peña" })).toBeTruthy();
@@ -120,5 +121,104 @@ describe("excursiones", () => {
     renderAt("/excursiones/nueva");
     expect(await screen.findByText(/aún no están activadas/)).toBeTruthy();
     expect(screen.queryByLabelText("¿A dónde?")).toBeNull();
+  });
+
+  it("admiten varias fotos con su frase, como mucho 12", () => {
+    const photo = (n: number) => ({ path: `h/${n}.webp`, caption: "" });
+    const twelve = Array.from({ length: 12 }, (_, i) => photo(i));
+    expect(excursionInputSchema.safeParse({ ...valid, photos: twelve }).success).toBe(true);
+    expect(
+      excursionInputSchema.safeParse({ ...valid, photos: [...twelve, photo(12)] }).success,
+    ).toBe(false);
+    expect(
+      excursionInputSchema.safeParse({
+        ...valid,
+        photos: [{ path: "h/1.webp", caption: "x".repeat(201) }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("las fotos se ven numeradas y se reordenan con su frase", async () => {
+    const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    const houseId = String(fake.tables.houses![0]!.id);
+    const id = "77777777-7777-4777-8777-777777777777";
+    fake.tables.excursions!.push({
+      id,
+      house_id: houseId,
+      title: "Cascada",
+      description: "",
+      getting_there: "",
+      duration: "medio",
+      difficulty: "facil",
+      map_url: null,
+      photo_path: `${houseId}/a.webp`,
+      photos: [
+        { path: `${houseId}/a.webp`, caption: "La cascada" },
+        { path: `${houseId}/b.webp`, caption: "Aparcar junto a la ermita" },
+      ],
+      last_visited: null,
+      created_by: fake.user.id,
+    });
+    const user = userEvent.setup();
+    renderAt(`/excursiones/${id}`);
+    expect(await screen.findByRole("heading", { name: "Cómo encontrar el sitio" })).toBeTruthy();
+    expect(screen.getByText("Foto 2 de 2")).toBeTruthy();
+    expect(screen.getByText("Aparcar junto a la ermita")).toBeTruthy();
+
+    await user.click(screen.getByRole("link", { name: "Cambiar esta excursión" }));
+    await user.click(await screen.findByRole("button", { name: "Subir la foto 2" }));
+    const first = screen.getByLabelText(/Foto 1/);
+    expect((first as HTMLInputElement).value).toBe("Aparcar junto a la ermita");
+    await user.type(screen.getByLabelText(/Foto 2/), " desde arriba");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await vi.waitFor(() =>
+      expect(fake.tables.excursions![0]).toMatchObject({
+        photo_path: `${houseId}/b.webp`,
+        photos: [
+          { path: `${houseId}/b.webp`, caption: "Aparcar junto a la ermita" },
+          { path: `${houseId}/a.webp`, caption: "La cascada desde arriba" },
+        ],
+      }),
+    );
+  });
+
+  it("sin el SQL de varias fotos sigue funcionando con una sola", async () => {
+    const fake = installFakeSupabase({
+      signedIn: true,
+      name: "Ana",
+      house: "Casa",
+      missingColumns: { excursions: ["photos"] },
+    });
+    const houseId = String(fake.tables.houses![0]!.id);
+    const id = "88888888-8888-4888-8888-888888888888";
+    fake.tables.excursions!.push({
+      id,
+      house_id: houseId,
+      title: "Mirador",
+      description: "",
+      getting_there: "",
+      duration: "rato",
+      difficulty: "facil",
+      map_url: null,
+      photo_path: `${houseId}/a.webp`,
+      last_visited: null,
+      created_by: fake.user.id,
+    });
+    const user = userEvent.setup();
+    renderAt(`/excursiones/${id}/editar`);
+    expect(await screen.findByText(/solo cabe una foto/)).toBeTruthy();
+    expect(screen.getByLabelText(/Foto 1/)).toBeTruthy();
+    expect(screen.queryByText(/Añadir/)).toBeNull();
+    await user.clear(screen.getByLabelText("¿A dónde?"));
+    await user.type(screen.getByLabelText("¿A dónde?"), "Mirador nuevo");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await vi.waitFor(() =>
+      expect(fake.tables.excursions![0]).toMatchObject({
+        title: "Mirador nuevo",
+        photo_path: `${houseId}/a.webp`,
+      }),
+    );
+    expect(fake.tables.excursions![0]).not.toHaveProperty("photos");
   });
 });

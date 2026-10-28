@@ -16,7 +16,7 @@ import { ExcursionsNotReady } from "./NotReady";
 /** Excursiones cerca de la casa: cascadas, miradores, pueblos de al lado… */
 export function ExcursionsPage() {
   const excursions = useExcursions();
-  const all = excursions.data ?? [];
+  const all = excursions.data?.items ?? [];
   const today = toKey(new Date());
   const notReady = excursions.error instanceof ExcursionsNotReadyError;
   return (
@@ -55,7 +55,7 @@ export function ExcursionsPage() {
 }
 
 function ExcursionCard({ excursion, today }: { excursion: Excursion; today: string }) {
-  const url = useExcursionPhotoUrl(excursion.photo);
+  const url = useExcursionPhotoUrl(excursion.photos[0]?.path ?? null);
   const duration = DURATIONS[excursion.duration];
   const difficulty = DIFFICULTIES[excursion.difficulty];
   return (

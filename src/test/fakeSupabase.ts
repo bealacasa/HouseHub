@@ -17,6 +17,8 @@ export function installFakeSupabase(
     house?: string;
     /** Tablas sin crear (migración sin ejecutar): responden como PostgREST, PGRST205. */
     missingTables?: string[];
+    /** Columnas sin crear: leerlas da 42703 y escribirlas PGRST204, como en Supabase. */
+    missingColumns?: Record<string, string[]>;
   } = {},
 ) {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "ana@example.com" };
@@ -209,7 +211,21 @@ export function installFakeSupabase(
     invoke: vi.fn(async (_name: string, _opts: unknown) => ok({ houseId: "h" })),
   };
 
+  /** Consulta que siempre responde con ese error (tabla o columna que no existe). */
+  function failing(code: string) {
+    const missing = { data: null, error: { code, message: "not found" } };
+    const builder: Record<string, unknown> = {
+      then: <T>(resolve: (v: typeof missing) => T) => Promise.resolve(missing).then(resolve),
+      single: async () => missing,
+    };
+    for (const m of ["select", "eq", "gte", "order", "limit", "insert", "update", "delete"])
+      builder[m] = () => builder;
+    return builder;
+  }
+
   const from = (table: string) => {
+    const missingCols = options.missingColumns?.[table] ?? [];
+    const usesMissing = (cols: string[]) => cols.some((c) => missingCols.includes(c));
     if (options.missingTables?.includes(table)) {
       const missing = { data: null, error: { code: "PGRST205", message: "table not found" } };
       const builder: Record<string, unknown> = {
@@ -222,8 +238,10 @@ export function installFakeSupabase(
     }
     if (table !== "profiles") {
       return {
-        select: () => query(table),
+        select: (cols = "*") =>
+          usesMissing(cols.split(",").map((c) => c.trim())) ? failing("42703") : query(table),
         insert: (row: Row) => {
+          if (usesMissing(Object.keys(row))) return failing("PGRST204");
           // Valores por defecto como en Postgres (las columnas que sobran se ignoran).
           const created: Row = {
             id: uid(),
@@ -243,12 +261,15 @@ export function installFakeSupabase(
             },
           };
         },
-        update: (changes: Row) => ({
-          eq: async (col: string, value: unknown) => {
-            for (const r of rows(table)) if (r[col] === value) Object.assign(r, changes);
-            return { error: null };
-          },
-        }),
+        update: (changes: Row) =>
+          usesMissing(Object.keys(changes))
+            ? failing("PGRST204")
+            : {
+                eq: async (col: string, value: unknown) => {
+                  for (const r of rows(table)) if (r[col] === value) Object.assign(r, changes);
+                  return { error: null };
+                },
+              },
         delete: () => ({
           eq: async (col: string, value: unknown) => {
             tables[table] = rows(table).filter((r) => r[col] !== value);

@@ -19,6 +19,7 @@ import {
   useExcursionPhotoUrl,
   useExcursions,
   useMarkVisited,
+  type ExcursionPhoto,
 } from "./excursions";
 import { ExcursionsNotReady } from "./NotReady";
 
@@ -28,8 +29,11 @@ export function ExcursionPage() {
   const excursions = useExcursions();
   const { isAdmin, me } = useHouse();
   const visited = useMarkVisited();
-  const excursion = (excursions.data ?? []).find((x) => x.id === id);
-  const photo = useExcursionPhotoUrl(excursion?.photo ?? null);
+  const excursion = (excursions.data?.items ?? []).find((x) => x.id === id);
+  const photos = excursion?.photos ?? [];
+  // Una sola foto sin frase: arriba, como portada. Si hay más, van numeradas más abajo.
+  const onlyCover = photos.length === 1 && !photos[0]?.caption;
+  const cover = useExcursionPhotoUrl(onlyCover ? (photos[0]?.path ?? null) : null);
   if (excursions.isPending) return null;
   if (excursions.error instanceof ExcursionsNotReadyError) {
     return (
@@ -61,9 +65,9 @@ export function ExcursionPage() {
         ← Excursiones
       </Link>
       <PageTitle title={excursion.title} />
-      {photo.data && (
+      {cover.data && (
         <img
-          src={photo.data}
+          src={cover.data}
           alt={`Foto de ${excursion.title}`}
           className="mb-5 aspect-[4/3] w-full rounded-3xl object-cover"
         />
@@ -91,6 +95,20 @@ export function ExcursionPage() {
           <h2 className="text-xl font-bold">Cómo se llega</h2>
           <p className="mt-1 text-xl">{excursion.gettingThere}</p>
         </Card>
+      )}
+      {!onlyCover && photos.length > 0 && (
+        <section aria-labelledby="como-encontrarlo" className="mb-5">
+          <h2 id="como-encontrarlo" className="mb-3 text-2xl font-bold">
+            Cómo encontrar el sitio
+          </h2>
+          <ol className="space-y-4">
+            {photos.map((p, i) => (
+              <li key={p.path}>
+                <PhotoCard photo={p} number={i + 1} total={photos.length} />
+              </li>
+            ))}
+          </ol>
+        </section>
       )}
       {excursion.description && (
         <Card className="mb-5 bg-accent-soft!">
@@ -147,5 +165,43 @@ export function ExcursionPage() {
         )}
       </div>
     </>
+  );
+}
+
+/** Foto numerada con su frase (como los pasos de las instrucciones). */
+function PhotoCard({
+  photo,
+  number,
+  total,
+}: {
+  photo: ExcursionPhoto;
+  number: number;
+  total: number;
+}) {
+  const url = useExcursionPhotoUrl(photo.path);
+  return (
+    <Card className="overflow-hidden p-0!">
+      {url.data && (
+        <img
+          src={url.data}
+          alt={photo.caption || `Foto ${number}`}
+          className="aspect-[4/3] w-full rounded-t-3xl object-cover"
+        />
+      )}
+      <div className="flex gap-4 p-5">
+        <span
+          aria-hidden="true"
+          className="grid size-12 shrink-0 place-items-center rounded-full bg-linear-to-br from-accent to-accent-2 text-2xl font-extrabold text-accent-contrast"
+        >
+          {number}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-semibold text-muted">
+            Foto {number} de {total}
+          </p>
+          {photo.caption && <p className="mt-1 text-xl leading-relaxed">{photo.caption}</p>}
+        </div>
+      </div>
+    </Card>
   );
 }

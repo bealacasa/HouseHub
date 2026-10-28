@@ -6,8 +6,13 @@ import type { DateKey } from "@/features/calendar/stays";
 
 /*
  * Excursiones cerca de la casa: qué es, cómo se llega, cuánto dura, si es fácil,
- * enlace al mapa, una foto y «la última vez que fuimos».
+ * enlace al mapa, fotos en orden para encontrar el sitio y «la última vez que fuimos».
  */
+
+/** Foto para encontrar el sitio, con su frase («Aparcar junto a la ermita»). */
+export type ExcursionPhoto = { path: string; caption: string };
+
+export const MAX_PHOTOS = 12;
 
 export const DURATIONS = {
   rato: { label: "Un rato", hint: "Menos de 2 horas", icon: "⏱️" },
@@ -34,9 +39,17 @@ export type Excursion = {
   duration: Duration;
   difficulty: Difficulty;
   mapUrl: string | null;
-  photo: string | null;
+  /** En orden; la primera es la portada. */
+  photos: ExcursionPhoto[];
   lastVisited: DateKey | null;
   createdBy: string | null;
+};
+
+/** Lo que devuelve la consulta: las excursiones y si ya caben varias fotos. */
+export type ExcursionsData = {
+  items: Excursion[];
+  /** false = falta la migración 20261028000012: solo una foto (la portada). */
+  multiPhoto: boolean;
 };
 
 export const excursionInputSchema = z.object({
@@ -54,7 +67,14 @@ export const excursionInputSchema = z.object({
     .trim()
     .max(300, "El enlace es demasiado largo.")
     .refine((v) => v === "" || /^https:\/\/\S+$/.test(v), "El enlace debe empezar por https://"),
-  photo: z.string().nullable(),
+  photos: z
+    .array(
+      z.object({
+        path: z.string().min(1),
+        caption: z.string().trim().max(200, "Máximo 200 letras en cada foto."),
+      }),
+    )
+    .max(MAX_PHOTOS, `Máximo ${MAX_PHOTOS} fotos.`),
 });
 export type ExcursionInput = z.input<typeof excursionInputSchema>;
 
@@ -67,6 +87,7 @@ const excursionRow = z.object({
   difficulty: z.enum(difficultyKeys),
   map_url: z.string().nullable(),
   photo_path: z.string().nullable(),
+  photos: z.array(z.object({ path: z.string(), caption: z.string() })).optional(),
   last_visited: z.string().nullable(),
   created_by: z.uuid().nullable(),
 });
@@ -92,36 +113,60 @@ export function isMissingInDatabase(error: unknown): boolean {
 const notReadyOr = (error: unknown) =>
   isMissingInDatabase(error) ? new ExcursionsNotReadyError() : error;
 
+/** Columna que no existe (Postgres 42703; PostgREST PGRST204 al escribir). */
+const isMissingColumn = (error: unknown) => {
+  const code = (error as { code?: unknown } | null)?.code;
+  return code === "42703" || code === "PGRST204";
+};
+
+const COLUMNS =
+  "id, title, description, getting_there, duration, difficulty, map_url, photo_path, last_visited, created_by";
+
+function toExcursion(raw: unknown): Excursion {
+  const r = excursionRow.parse(raw);
+  // Sin la columna de fotos (o vacía en filas antiguas), la portada es la única foto.
+  const photos =
+    r.photos && r.photos.length > 0
+      ? r.photos
+      : r.photo_path
+        ? [{ path: r.photo_path, caption: "" }]
+        : [];
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    gettingThere: r.getting_there,
+    duration: r.duration,
+    difficulty: r.difficulty,
+    mapUrl: r.map_url,
+    photos,
+    lastVisited: r.last_visited,
+    createdBy: r.created_by,
+  };
+}
+
 export function useExcursions() {
   return useQuery({
     queryKey: excursionsKey,
     // Si falta la migración, no tiene sentido reintentar.
     retry: (count, error) => !(error instanceof ExcursionsNotReadyError) && count < 2,
-    queryFn: async (): Promise<Excursion[]> => {
-      const { data, error } = await getSupabase()
+    queryFn: async (): Promise<ExcursionsData> => {
+      const supabase = getSupabase();
+      let multiPhoto = true;
+      let result: { data: unknown[] | null; error: unknown } = await supabase
         .from("excursions")
-        .select(
-          "id, title, description, getting_there, duration, difficulty, map_url, photo_path, last_visited, created_by",
-        )
+        .select(`${COLUMNS}, photos`)
         .order("title");
-      if (error) throw notReadyOr(error);
-      return (data ?? [])
-        .map((raw) => {
-          const r = excursionRow.parse(raw);
-          return {
-            id: r.id,
-            title: r.title,
-            description: r.description,
-            gettingThere: r.getting_there,
-            duration: r.duration,
-            difficulty: r.difficulty,
-            mapUrl: r.map_url,
-            photo: r.photo_path,
-            lastVisited: r.last_visited,
-            createdBy: r.created_by,
-          };
-        })
+      if (result.error && isMissingColumn(result.error)) {
+        // Falta la migración de varias fotos: se sigue con una sola.
+        multiPhoto = false;
+        result = await supabase.from("excursions").select(COLUMNS).order("title");
+      }
+      if (result.error) throw notReadyOr(result.error);
+      const items = (result.data ?? [])
+        .map(toExcursion)
         .sort((a, b) => a.title.localeCompare(b.title, "es"));
+      return { items, multiPhoto };
     },
   });
 }
@@ -129,17 +174,27 @@ export function useExcursions() {
 export function useSaveExcursion(houseId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, input }: { id?: string; input: ExcursionInput }) => {
+    mutationFn: async ({
+      id,
+      input,
+      multiPhoto,
+    }: {
+      id?: string;
+      input: ExcursionInput;
+      multiPhoto: boolean;
+    }) => {
       const e = excursionInputSchema.parse(input);
-      const row = {
+      const row: Record<string, unknown> = {
         title: e.title,
         description: e.description,
         getting_there: e.gettingThere,
         duration: e.duration,
         difficulty: e.difficulty,
         map_url: e.mapUrl === "" ? null : e.mapUrl,
-        photo_path: e.photo,
+        // La portada también en photo_path (versiones anteriores de la app).
+        photo_path: e.photos[0]?.path ?? null,
       };
+      if (multiPhoto) row.photos = e.photos;
       const supabase = getSupabase();
       if (id) {
         const { error } = await supabase.from("excursions").update(row).eq("id", id);
@@ -180,8 +235,8 @@ export function useDeleteExcursion() {
       const supabase = getSupabase();
       const { error } = await supabase.from("excursions").delete().eq("id", excursion.id);
       if (error) throw error;
-      if (excursion.photo)
-        await supabase.storage.from("excursion-photos").remove([excursion.photo]);
+      const paths = excursion.photos.map((p) => p.path);
+      if (paths.length > 0) await supabase.storage.from("excursion-photos").remove(paths);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: excursionsKey }),
   });
