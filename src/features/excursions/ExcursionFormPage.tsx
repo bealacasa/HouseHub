@@ -31,6 +31,7 @@ import {
   type Excursion,
   type ExcursionPhoto,
 } from "./excursions";
+import { CoverBadge } from "./CoverBadge";
 import { ExcursionsNotReady } from "./NotReady";
 
 /** Añadir (/excursiones/nueva) o cambiar (/excursiones/:id/editar) una excursión. */
@@ -78,27 +79,40 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
   const navigate = useNavigate();
   const [dialog, confirm] = useConfirm();
   const photoInput = useId();
+  const coverInput = useId();
   const [title, setTitle] = useState(excursion?.title ?? "");
   const [description, setDescription] = useState(excursion?.description ?? "");
   const [gettingThere, setGettingThere] = useState(excursion?.gettingThere ?? "");
   const [duration, setDuration] = useState<Duration>(excursion?.duration ?? "medio");
   const [difficulty, setDifficulty] = useState<Difficulty>(excursion?.difficulty ?? "facil");
   const [mapUrl, setMapUrl] = useState(excursion?.mapUrl ?? "");
+  const [cover, setCover] = useState<string | null>(excursion?.cover ?? null);
   const [photos, setPhotos] = useState<DraftPhoto[]>(() => (excursion?.photos ?? []).map(draft));
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState<"cover" | "steps" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Sin la migración de varias fotos, solo cabe una (la portada).
-  const maxPhotos = multiPhoto ? MAX_PHOTOS : 1;
+  const coverUrl = useExcursionPhotoUrl(cover);
   const save = useSaveExcursion(house.id);
   const remove = useDeleteExcursion();
   const canEdit = !excursion || isAdmin || excursion.createdBy === me.userId;
   const back = excursion ? `/excursiones/${excursion.id}` : "/excursiones";
 
-  /** Sube una o varias fotos (en el orden elegido) y las añade al final. */
+  async function onCoverFile(file: File) {
+    setUploading("cover");
+    setError(null);
+    try {
+      setCover(await uploadExcursionPhoto(house.id, file));
+    } catch (e) {
+      setError(e instanceof ImageError ? e.message : "No se pudo subir la foto.");
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  /** Sube una o varias fotos (en el orden elegido) y las añade al final de los pasos. */
   async function onFiles(files: File[]) {
-    const room = maxPhotos - photos.length;
+    const room = MAX_PHOTOS - photos.length;
     if (room <= 0) return;
-    setUploading(true);
+    setUploading("steps");
     setError(null);
     try {
       for (const file of files.slice(0, room)) {
@@ -106,12 +120,23 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
         setPhotos((list) => [...list, draft({ path, caption: "" })]);
       }
       if (files.length > room)
-        setError(`Solo caben ${maxPhotos} fotos; el resto no se ha añadido.`);
+        setError(`Solo caben ${MAX_PHOTOS} fotos; el resto no se ha añadido.`);
     } catch (e) {
       setError(e instanceof ImageError ? e.message : "No se pudo subir la foto.");
     } finally {
-      setUploading(false);
+      setUploading(null);
     }
+  }
+
+  /** Un paso pasa a ser la portada; la portada anterior, si había, pasa a ser el paso 1. */
+  function makeCover(key: string) {
+    const step = photos.find((p) => p.key === key);
+    if (!step) return;
+    setPhotos((list) => [
+      ...(cover ? [draft({ path: cover, caption: "" })] : []),
+      ...list.filter((p) => p.key !== key),
+    ]);
+    setCover(step.path);
   }
 
   const changePhoto = (key: string, caption: string) =>
@@ -126,6 +151,7 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
       duration,
       difficulty,
       mapUrl,
+      cover,
       photos: photos.map(({ path, caption }) => ({ path, caption })),
     };
     const parsed = excursionInputSchema.safeParse(input);
@@ -266,12 +292,54 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
             </div>
           </FormSection>
 
+          <FormSection title="Foto de portada" hint="La que se ve en la lista de excursiones.">
+            {coverUrl.data && (
+              <div className="relative">
+                <img
+                  src={coverUrl.data}
+                  alt="Foto de portada"
+                  className="aspect-[4/3] w-full rounded-2xl object-cover ring-4 ring-accent"
+                />
+                <CoverBadge />
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <label
+                htmlFor={coverInput}
+                className={`${small} inline-flex cursor-pointer items-center`}
+              >
+                {uploading === "cover"
+                  ? "Subiendo…"
+                  : cover
+                    ? "📷 Cambiar la portada"
+                    : "📷 Poner foto de portada"}
+              </label>
+              <input
+                id={coverInput}
+                type="file"
+                accept="image/*"
+                disabled={uploading !== null}
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void onCoverFile(file);
+                  e.target.value = "";
+                }}
+              />
+              {cover && (
+                <button type="button" onClick={() => setCover(null)} className={small}>
+                  Quitar la portada
+                </button>
+              )}
+            </div>
+          </FormSection>
+
           <FormSection
             title="Fotos para encontrar el sitio"
             hint={
               multiPhoto
-                ? "En orden, con una frase cada una. La primera es la portada."
-                : "De momento solo cabe una foto (falta un paso en Supabase para poner más)."
+                ? "Paso a paso, con una frase cada una: dónde aparcar, el cruce, el camino…"
+                : "Muy pronto: falta un paso en Supabase para poder añadirlas."
             }
           >
             {photos.length > 0 && (
@@ -284,19 +352,20 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
                       total={photos.length}
                       onCaption={(caption) => changePhoto(p.key, caption)}
                       onMove={(delta) => setPhotos((list) => moveStep(list, i, delta))}
+                      onMakeCover={() => makeCover(p.key)}
                       onRemove={() => setPhotos((list) => list.filter((x) => x.key !== p.key))}
                     />
                   </li>
                 ))}
               </ol>
             )}
-            {photos.length < maxPhotos && (
+            {multiPhoto && photos.length < MAX_PHOTOS && (
               <>
                 <label
                   htmlFor={photoInput}
                   className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-field text-lg font-semibold"
                 >
-                  {uploading
+                  {uploading === "steps"
                     ? "Subiendo…"
                     : photos.length === 0
                       ? "📷 Añadir fotos"
@@ -306,8 +375,8 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
                   id={photoInput}
                   type="file"
                   accept="image/*"
-                  multiple={multiPhoto}
-                  disabled={uploading}
+                  multiple
+                  disabled={uploading !== null}
                   className="sr-only"
                   onChange={(e) => {
                     const files = Array.from(e.target.files ?? []);
@@ -325,7 +394,11 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
         )}
         {canEdit ? (
           <>
-            <button type="submit" disabled={save.isPending || uploading} className={buttonPrimary}>
+            <button
+              type="submit"
+              disabled={save.isPending || uploading !== null}
+              className={buttonPrimary}
+            >
               {save.isPending ? "Guardando…" : excursion ? "Guardar cambios" : "Añadir excursión"}
             </button>
             {excursion && (
@@ -345,13 +418,17 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
   );
 }
 
-/** Una foto del formulario: imagen, su frase y botones para ordenarla o quitarla. */
+const small =
+  "min-h-12 rounded-xl border-2 border-field px-3 text-lg font-semibold disabled:opacity-40";
+
+/** Un paso del formulario: foto, su frase y botones para ordenarlo, hacerlo portada o quitarlo. */
 function PhotoEditor({
   photo,
   index,
   total,
   onCaption,
   onMove,
+  onMakeCover,
   onRemove,
 }: {
   photo: DraftPhoto;
@@ -359,24 +436,31 @@ function PhotoEditor({
   total: number;
   onCaption: (caption: string) => void;
   onMove: (delta: -1 | 1) => void;
+  onMakeCover: () => void;
   onRemove: () => void;
 }) {
   const url = useExcursionPhotoUrl(photo.path);
   const n = index + 1;
-  const small =
-    "min-h-12 rounded-xl border-2 border-field px-3 text-lg font-semibold disabled:opacity-40";
   return (
     <Card className="bg-surface-2!">
+      <div className="mb-3 flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="grid size-10 shrink-0 place-items-center rounded-full bg-linear-to-br from-accent to-accent-2 text-xl font-extrabold text-accent-contrast"
+        >
+          {n}
+        </span>
+        <label htmlFor={`exc-photo-${photo.key}`} className="text-xl font-semibold">
+          Paso {n}
+        </label>
+      </div>
       {url.data && (
         <img
           src={url.data}
-          alt={`Foto ${n}`}
+          alt={`Foto del paso ${n}`}
           className="mb-3 aspect-[4/3] w-full rounded-2xl object-cover"
         />
       )}
-      <label htmlFor={`exc-photo-${photo.key}`} className={fieldLabel}>
-        Foto {n} {n === 1 && <span className="font-normal text-muted">(portada)</span>}
-      </label>
       <input
         id={`exc-photo-${photo.key}`}
         maxLength={200}
@@ -390,7 +474,7 @@ function PhotoEditor({
           type="button"
           onClick={() => onMove(-1)}
           disabled={index === 0}
-          aria-label={`Subir la foto ${n}`}
+          aria-label={`Subir el paso ${n}`}
           className={small}
         >
           ↑ Subir
@@ -399,15 +483,23 @@ function PhotoEditor({
           type="button"
           onClick={() => onMove(1)}
           disabled={index === total - 1}
-          aria-label={`Bajar la foto ${n}`}
+          aria-label={`Bajar el paso ${n}`}
           className={small}
         >
           ↓ Bajar
         </button>
         <button
           type="button"
+          onClick={onMakeCover}
+          aria-label={`Poner la foto del paso ${n} de portada`}
+          className={small}
+        >
+          ⭐ Poner de portada
+        </button>
+        <button
+          type="button"
           onClick={onRemove}
-          aria-label={`Quitar la foto ${n}`}
+          aria-label={`Quitar el paso ${n}`}
           className={`${small} border-danger text-danger`}
         >
           Quitar

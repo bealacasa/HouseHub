@@ -6,10 +6,15 @@ import type { DateKey } from "@/features/calendar/stays";
 
 /*
  * Excursiones cerca de la casa: qué es, cómo se llega, cuánto dura, si es fácil,
- * enlace al mapa, fotos en orden para encontrar el sitio y «la última vez que fuimos».
+ * enlace al mapa, una foto de portada, fotos en orden para encontrar el sitio y «la última
+ * vez que fuimos».
+ *
+ * La portada va en photo_path y los pasos en photos. (Una versión anterior guardaba la
+ * portada también como primera foto de photos, y la migración 0012 hizo lo mismo con las
+ * existentes: al leer, esa copia se quita de los pasos.)
  */
 
-/** Foto para encontrar el sitio, con su frase («Aparcar junto a la ermita»). */
+/** Paso para encontrar el sitio: foto con su frase («Aparcar junto a la ermita»). */
 export type ExcursionPhoto = { path: string; caption: string };
 
 export const MAX_PHOTOS = 12;
@@ -39,7 +44,9 @@ export type Excursion = {
   duration: Duration;
   difficulty: Difficulty;
   mapUrl: string | null;
-  /** En orden; la primera es la portada. */
+  /** Foto de portada (no es un paso). */
+  cover: string | null;
+  /** Pasos para encontrar el sitio, en orden. */
   photos: ExcursionPhoto[];
   lastVisited: DateKey | null;
   createdBy: string | null;
@@ -48,7 +55,7 @@ export type Excursion = {
 /** Lo que devuelve la consulta: las excursiones y si ya caben varias fotos. */
 export type ExcursionsData = {
   items: Excursion[];
-  /** false = falta la migración 20261028000012: solo una foto (la portada). */
+  /** false = falta la migración 20261028000012: solo la portada, sin pasos con foto. */
   multiPhoto: boolean;
 };
 
@@ -67,6 +74,7 @@ export const excursionInputSchema = z.object({
     .trim()
     .max(300, "El enlace es demasiado largo.")
     .refine((v) => v === "" || /^https:\/\/\S+$/.test(v), "El enlace debe empezar por https://"),
+  cover: z.string().min(1).nullable(),
   photos: z
     .array(
       z.object({
@@ -74,7 +82,7 @@ export const excursionInputSchema = z.object({
         caption: z.string().trim().max(200, "Máximo 200 letras en cada foto."),
       }),
     )
-    .max(MAX_PHOTOS, `Máximo ${MAX_PHOTOS} fotos.`),
+    .max(MAX_PHOTOS, `Máximo ${MAX_PHOTOS} fotos para encontrar el sitio.`),
 });
 export type ExcursionInput = z.input<typeof excursionInputSchema>;
 
@@ -124,13 +132,8 @@ const COLUMNS =
 
 function toExcursion(raw: unknown): Excursion {
   const r = excursionRow.parse(raw);
-  // Sin la columna de fotos (o vacía en filas antiguas), la portada es la única foto.
-  const photos =
-    r.photos && r.photos.length > 0
-      ? r.photos
-      : r.photo_path
-        ? [{ path: r.photo_path, caption: "" }]
-        : [];
+  // La portada no se repite como paso (ver el comentario de arriba).
+  const photos = (r.photos ?? []).filter((p) => p.path !== r.photo_path);
   return {
     id: r.id,
     title: r.title,
@@ -139,6 +142,7 @@ function toExcursion(raw: unknown): Excursion {
     duration: r.duration,
     difficulty: r.difficulty,
     mapUrl: r.map_url,
+    cover: r.photo_path,
     photos,
     lastVisited: r.last_visited,
     createdBy: r.created_by,
@@ -191,8 +195,7 @@ export function useSaveExcursion(houseId: string) {
         duration: e.duration,
         difficulty: e.difficulty,
         map_url: e.mapUrl === "" ? null : e.mapUrl,
-        // La portada también en photo_path (versiones anteriores de la app).
-        photo_path: e.photos[0]?.path ?? null,
+        photo_path: e.cover,
       };
       if (multiPhoto) row.photos = e.photos;
       const supabase = getSupabase();
@@ -235,7 +238,10 @@ export function useDeleteExcursion() {
       const supabase = getSupabase();
       const { error } = await supabase.from("excursions").delete().eq("id", excursion.id);
       if (error) throw error;
-      const paths = excursion.photos.map((p) => p.path);
+      const paths = [
+        ...(excursion.cover ? [excursion.cover] : []),
+        ...excursion.photos.map((p) => p.path),
+      ];
       if (paths.length > 0) await supabase.storage.from("excursion-photos").remove(paths);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: excursionsKey }),

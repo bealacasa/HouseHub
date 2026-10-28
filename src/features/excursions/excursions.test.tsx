@@ -27,6 +27,7 @@ const valid = {
   duration: "medio",
   difficulty: "facil",
   mapUrl: "",
+  cover: null,
   photos: [],
 };
 
@@ -138,10 +139,13 @@ describe("excursiones", () => {
     ).toBe(false);
   });
 
-  it("las fotos se ven numeradas y se reordenan con su frase", async () => {
+  it("la portada va aparte y los pasos se numeran desde el 1", async () => {
     const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
     const houseId = String(fake.tables.houses![0]!.id);
     const id = "77777777-7777-4777-8777-777777777777";
+    const cover = `${houseId}/cover.webp`;
+    const a = `${houseId}/a.webp`;
+    const b = `${houseId}/b.webp`;
     fake.tables.excursions!.push({
       id,
       house_id: houseId,
@@ -151,10 +155,10 @@ describe("excursiones", () => {
       duration: "medio",
       difficulty: "facil",
       map_url: null,
-      photo_path: `${houseId}/a.webp`,
+      photo_path: cover,
       photos: [
-        { path: `${houseId}/a.webp`, caption: "La cascada" },
-        { path: `${houseId}/b.webp`, caption: "Aparcar junto a la ermita" },
+        { path: a, caption: "Aparcar junto a la ermita" },
+        { path: b, caption: "En la fuente, a la izquierda" },
       ],
       last_visited: null,
       created_by: fake.user.id,
@@ -162,28 +166,59 @@ describe("excursiones", () => {
     const user = userEvent.setup();
     renderAt(`/excursiones/${id}`);
     expect(await screen.findByRole("heading", { name: "Cómo encontrar el sitio" })).toBeTruthy();
-    expect(screen.getByText("Foto 2 de 2")).toBeTruthy();
-    expect(screen.getByText("Aparcar junto a la ermita")).toBeTruthy();
+    expect(screen.getByText("Paso 1 de 2")).toBeTruthy();
+    expect(screen.getByText("Paso 2 de 2")).toBeTruthy();
+    expect(screen.queryByText("Paso 3 de 3")).toBeNull();
 
     await user.click(screen.getByRole("link", { name: "Cambiar esta excursión" }));
-    await user.click(await screen.findByRole("button", { name: "Subir la foto 2" }));
-    const first = screen.getByLabelText(/Foto 1/);
-    expect((first as HTMLInputElement).value).toBe("Aparcar junto a la ermita");
-    await user.type(screen.getByLabelText(/Foto 2/), " desde arriba");
+    expect(await screen.findByRole("heading", { name: "Foto de portada" })).toBeTruthy();
+    // Reordenar: el paso 2 sube y su frase va con él.
+    await user.click(screen.getByRole("button", { name: "Subir el paso 2" }));
+    expect((screen.getByLabelText("Paso 1") as HTMLInputElement).value).toBe(
+      "En la fuente, a la izquierda",
+    );
+    // El paso 2 (aparcar) pasa a ser la portada; la portada antigua, el paso 1.
+    await user.click(screen.getByRole("button", { name: "Poner la foto del paso 2 de portada" }));
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
     await vi.waitFor(() =>
       expect(fake.tables.excursions![0]).toMatchObject({
-        photo_path: `${houseId}/b.webp`,
+        photo_path: a,
         photos: [
-          { path: `${houseId}/b.webp`, caption: "Aparcar junto a la ermita" },
-          { path: `${houseId}/a.webp`, caption: "La cascada desde arriba" },
+          { path: cover, caption: "" },
+          { path: b, caption: "En la fuente, a la izquierda" },
         ],
       }),
     );
   });
 
-  it("sin el SQL de varias fotos sigue funcionando con una sola", async () => {
+  it("si la portada también está entre las fotos (versión anterior), no se repite", async () => {
+    const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    const houseId = String(fake.tables.houses![0]!.id);
+    const id = "99999999-9999-4999-8999-999999999999";
+    fake.tables.excursions!.push({
+      id,
+      house_id: houseId,
+      title: "Ermita",
+      description: "",
+      getting_there: "",
+      duration: "rato",
+      difficulty: "facil",
+      map_url: null,
+      photo_path: `${houseId}/cover.webp`,
+      photos: [
+        { path: `${houseId}/cover.webp`, caption: "" },
+        { path: `${houseId}/a.webp`, caption: "El camino" },
+      ],
+      last_visited: null,
+      created_by: fake.user.id,
+    });
+    renderAt(`/excursiones/${id}`);
+    expect(await screen.findByText("Paso 1 de 1")).toBeTruthy();
+    expect(screen.getByText("El camino")).toBeTruthy();
+  });
+
+  it("sin el SQL de varias fotos sigue funcionando con la portada", async () => {
     const fake = installFakeSupabase({
       signedIn: true,
       name: "Ana",
@@ -207,9 +242,9 @@ describe("excursiones", () => {
     });
     const user = userEvent.setup();
     renderAt(`/excursiones/${id}/editar`);
-    expect(await screen.findByText(/solo cabe una foto/)).toBeTruthy();
-    expect(screen.getByLabelText(/Foto 1/)).toBeTruthy();
-    expect(screen.queryByText(/Añadir/)).toBeNull();
+    expect(await screen.findByText(/falta un paso en Supabase/)).toBeTruthy();
+    expect(screen.getByText(/Cambiar la portada/)).toBeTruthy();
+    expect(screen.queryByText(/Añadir fotos/)).toBeNull();
     await user.clear(screen.getByLabelText("¿A dónde?"));
     await user.type(screen.getByLabelText("¿A dónde?"), "Mirador nuevo");
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));

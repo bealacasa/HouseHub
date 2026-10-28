@@ -21,6 +21,7 @@ import {
   useMarkVisited,
   type ExcursionPhoto,
 } from "./excursions";
+import { CoverBadge } from "./CoverBadge";
 import { ExcursionsNotReady } from "./NotReady";
 
 /** Ver una excursión: foto grande, lo esencial con palabras, el mapa y «Hoy hemos ido». */
@@ -31,9 +32,7 @@ export function ExcursionPage() {
   const visited = useMarkVisited();
   const excursion = (excursions.data?.items ?? []).find((x) => x.id === id);
   const photos = excursion?.photos ?? [];
-  // Una sola foto sin frase: arriba, como portada. Si hay más, van numeradas más abajo.
-  const onlyCover = photos.length === 1 && !photos[0]?.caption;
-  const cover = useExcursionPhotoUrl(onlyCover ? (photos[0]?.path ?? null) : null);
+  const cover = useExcursionPhotoUrl(excursion?.cover ?? null);
   if (excursions.isPending) return null;
   if (excursions.error instanceof ExcursionsNotReadyError) {
     return (
@@ -66,11 +65,14 @@ export function ExcursionPage() {
       </Link>
       <PageTitle title={excursion.title} />
       {cover.data && (
-        <img
-          src={cover.data}
-          alt={`Foto de ${excursion.title}`}
-          className="mb-5 aspect-[4/3] w-full rounded-3xl object-cover"
-        />
+        <div className="relative mb-5">
+          <img
+            src={cover.data}
+            alt={`Foto de ${excursion.title}`}
+            className="aspect-[4/3] w-full rounded-3xl object-cover"
+          />
+          <CoverBadge />
+        </div>
       )}
 
       <div className="mb-5 grid grid-cols-2 gap-3">
@@ -96,7 +98,7 @@ export function ExcursionPage() {
           <p className="mt-1 text-xl">{excursion.gettingThere}</p>
         </Card>
       )}
-      {!onlyCover && photos.length > 0 && (
+      {photos.length > 0 && (
         <section aria-labelledby="como-encontrarlo" className="mb-5">
           <h2 id="como-encontrarlo" className="mb-3 text-2xl font-bold">
             Cómo encontrar el sitio
@@ -184,7 +186,7 @@ function PhotoCard({
       {url.data && (
         <img
           src={url.data}
-          alt={photo.caption || `Foto ${number}`}
+          alt={photo.caption || `Foto del paso ${number}`}
           className="aspect-[4/3] w-full rounded-t-3xl object-cover"
         />
       )}
@@ -197,7 +199,7 @@ function PhotoCard({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-base font-semibold text-muted">
-            Foto {number} de {total}
+            Paso {number} de {total}
           </p>
           {photo.caption && <p className="mt-1 text-xl leading-relaxed">{photo.caption}</p>}
         </div>
