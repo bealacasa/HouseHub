@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -255,5 +255,54 @@ describe("excursiones", () => {
       }),
     );
     expect(fake.tables.excursions![0]).not.toHaveProperty("photos");
+  });
+
+  it("el inicio propone primero las excursiones que aún no hemos hecho", async () => {
+    const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    const houseId = String(fake.tables.houses![0]!.id);
+    const row = (n: number, title: string, lastVisited: string | null) => ({
+      id: `aaaaaaaa-aaaa-4aaa-8aaa-00000000000${n}`,
+      house_id: houseId,
+      title,
+      description: "",
+      getting_there: "",
+      duration: "medio",
+      difficulty: "facil",
+      map_url: null,
+      photo_path: null,
+      photos: [],
+      last_visited: lastVisited,
+      created_by: null,
+    });
+    fake.tables.excursions!.push(
+      row(1, "Ayer fuimos", toKey(new Date())),
+      row(2, "Hace mucho", "2025-05-01"),
+      row(3, "Nunca fuimos", null),
+      row(4, "Hace un año", "2025-10-01"),
+    );
+    renderAt("/");
+    const box = (await screen.findByRole("heading", { name: "¿De excursión?" })).closest(
+      "section",
+    )!;
+    const titles = within(box)
+      .getAllByRole("link")
+      .map((a) => a.textContent ?? "");
+    expect(titles[0]).toContain("Nunca fuimos");
+    expect(titles[1]).toContain("Hace mucho");
+    expect(titles[2]).toContain("Hace un año");
+    expect(within(box).queryByText("Ayer fuimos")).toBeNull();
+    expect(within(box).getByRole("link", { name: "Ver las 4 excursiones" })).toBeTruthy();
+  });
+
+  it("el inicio no enseña excursiones si aún no están activadas", async () => {
+    installFakeSupabase({
+      signedIn: true,
+      name: "Ana",
+      house: "Casa",
+      missingTables: ["excursions"],
+    });
+    renderAt("/");
+    expect(await screen.findByRole("heading", { name: /¿Quién está en la casa/ })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "¿De excursión?" })).toBeNull();
   });
 });

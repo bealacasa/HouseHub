@@ -7,6 +7,8 @@ import { Card, buttonSecondary, cardShadow } from "@/components/ui";
 import { useMe } from "@/features/auth/RequireAuth";
 import { StayCard } from "@/features/calendar/CalendarPage";
 import { staysOn, toKey, useStays } from "@/features/calendar/stays";
+import { ExcursionCard } from "@/features/excursions/ExcursionsPage";
+import { useExcursions } from "@/features/excursions/excursions";
 import { useHouse } from "@/features/house/HouseGate";
 import { useHousePhotoUrl } from "@/features/house/photo";
 import { useNotes } from "@/features/notes/notes";
@@ -84,6 +86,7 @@ export function HomePage() {
         )}
         <WhoIsGoing />
         <PendingNotes />
+        <ExcursionIdeas />
         <BalanceLink />
         {house.notes && (
           <Card>
@@ -178,6 +181,49 @@ function PendingNotes() {
         {pending.length > 0 ? "Ver y tachar" : "Añadir una nota"}
       </Link>
     </Card>
+  );
+}
+
+/**
+ * Excursiones: hasta 3 ideas, primero las que aún no hemos hecho y luego las de hace más
+ * tiempo. Si la sección aún no está activada en Supabase (o falla), no se enseña.
+ */
+function ExcursionIdeas() {
+  const excursions = useExcursions();
+  if (!excursions.isSuccess) return null;
+  const today = toKey(new Date());
+  const ideas = [...excursions.data.items]
+    .sort((a, b) => (a.lastVisited ?? "").localeCompare(b.lastVisited ?? ""))
+    .slice(0, 3);
+  return (
+    <section aria-labelledby="excursiones-inicio" className="space-y-3">
+      <h2 id="excursiones-inicio" className="px-1 text-2xl font-bold">
+        ¿De excursión?
+      </h2>
+      {ideas.length === 0 ? (
+        <p className="rounded-3xl border-2 border-dashed border-border p-5 text-center text-lg text-muted">
+          Aún no hay excursiones. Apunta los sitios bonitos de cerca.
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {ideas.map((x) => (
+            <li key={x.id}>
+              <ExcursionCard excursion={x} today={today} />
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link
+        to={ideas.length === 0 ? "/excursiones/nueva" : "/excursiones"}
+        className={buttonSecondary}
+      >
+        {ideas.length === 0
+          ? "Añadir una excursión"
+          : excursions.data.items.length > ideas.length
+            ? `Ver las ${excursions.data.items.length} excursiones`
+            : "Ver las excursiones"}
+      </Link>
+    </section>
   );
 }
 

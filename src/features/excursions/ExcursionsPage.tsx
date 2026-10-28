@@ -54,7 +54,8 @@ export function ExcursionsPage() {
   );
 }
 
-function ExcursionCard({ excursion, today }: { excursion: Excursion; today: string }) {
+/** Tarjeta de excursión: portada, nombre, duración y dificultad, y cuándo fuimos. */
+export function ExcursionCard({ excursion, today }: { excursion: Excursion; today: string }) {
   const url = useExcursionPhotoUrl(excursion.cover ?? excursion.photos[0]?.path ?? null);
   const duration = DURATIONS[excursion.duration];
   const difficulty = DIFFICULTIES[excursion.difficulty];
