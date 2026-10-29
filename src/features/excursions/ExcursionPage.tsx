@@ -9,7 +9,6 @@ import {
   buttonSecondary,
 } from "@/components/ui";
 import { longDate, toKey } from "@/features/calendar/stays";
-import { useHouse } from "@/features/house/HouseGate";
 import { errorMessage } from "@/features/house/house";
 import {
   DIFFICULTIES,
@@ -28,7 +27,6 @@ import { ExcursionsNotReady } from "./NotReady";
 export function ExcursionPage() {
   const { id } = useParams();
   const excursions = useExcursions();
-  const { isAdmin, me } = useHouse();
   const visited = useMarkVisited();
   const excursion = (excursions.data?.items ?? []).find((x) => x.id === id);
   const photos = excursion?.photos ?? [];
@@ -53,7 +51,6 @@ export function ExcursionPage() {
     );
   }
   const today = toKey(new Date());
-  const canEdit = isAdmin || excursion.createdBy === me.userId;
   const duration = DURATIONS[excursion.duration];
   const difficulty = DIFFICULTIES[excursion.difficulty];
   const wentToday = excursion.lastVisited === today;
@@ -160,11 +157,11 @@ export function ExcursionPage() {
           )}
         </Card>
 
-        {canEdit && (
+        {
           <Link to={`/excursiones/${excursion.id}/editar`} className={buttonSecondary}>
             Cambiar esta excursión
           </Link>
-        )}
+        }
       </div>
     </>
   );

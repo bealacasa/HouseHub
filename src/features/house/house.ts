@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { getSupabase } from "@/lib/supabase";
+import { NothingChangedError, expectChanged } from "@/lib/write";
 
 /*
  * La casa (solo hay una en toda la app), sus miembros y las invitaciones.
@@ -144,6 +145,7 @@ export function useHouseState(userId: string) {
 
 /** Mensaje claro a partir de un error de Supabase (los de negocio ya vienen en español). */
 export function errorMessage(error: unknown): string {
+  if (error instanceof NothingChangedError) return error.message;
   if (error instanceof z.ZodError) return error.issues[0]?.message ?? "Revisa los datos.";
   const e = error as { code?: string; message?: string } | null;
   if (e?.code === "P0001" && e.message) return e.message;
@@ -169,15 +171,13 @@ export function useCreateHouse() {
 export function useUpdateHouse(houseId: string) {
   return useHouseMutation(async (input: HouseInput) => {
     const data = houseInputSchema.parse(input);
-    const { error } = await getSupabase()
-      .from("houses")
-      .update({
-        name: data.name,
-        address: data.address,
-        notes: data.notes,
-      })
-      .eq("id", houseId);
-    if (error) throw error;
+    expectChanged(
+      await getSupabase()
+        .from("houses")
+        .update({ name: data.name, address: data.address, notes: data.notes })
+        .eq("id", houseId)
+        .select("id"),
+    );
   });
 }
 

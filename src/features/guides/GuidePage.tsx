@@ -1,13 +1,11 @@
 import { Link, useParams } from "react-router";
 import { Card, PageTitle, backLink, buttonPrimary, buttonSecondary } from "@/components/ui";
-import { useHouse } from "@/features/house/HouseGate";
 import { useGuides, useStepPhotoUrl, type GuideStep } from "./guides";
 
 /** Ver unas instrucciones: pasos grandes, numerados, con su foto. */
 export function GuidePage() {
   const { id } = useParams();
   const guides = useGuides();
-  const { isAdmin, me } = useHouse();
   if (guides.isPending) return null;
   const guide = (guides.data ?? []).find((g) => g.id === id);
   if (!guide) {
@@ -20,7 +18,6 @@ export function GuidePage() {
       </>
     );
   }
-  const canEdit = isAdmin || guide.createdBy === me.userId;
 
   return (
     <>
@@ -41,11 +38,11 @@ export function GuidePage() {
         ))}
       </ol>
       <p className="mt-6 text-center text-xl font-bold">✓ ¡Listo!</p>
-      {canEdit && (
+      {
         <Link to={`/instrucciones/${guide.id}/editar`} className={`${buttonSecondary} mt-6`}>
           Cambiar estas instrucciones
         </Link>
-      )}
+      }
     </>
   );
 }

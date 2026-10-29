@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { processImage } from "@/lib/image";
 import { getSupabase } from "@/lib/supabase";
+import { expectChanged } from "@/lib/write";
 
 /*
  * Instrucciones de la casa: título, introducción y pasos ordenados (texto + foto opcional).
@@ -84,8 +85,7 @@ export function useSaveGuide(houseId: string) {
       const row = { title: g.title, intro: g.intro, steps: g.steps };
       const supabase = getSupabase();
       if (id) {
-        const { error } = await supabase.from("guides").update(row).eq("id", id);
-        if (error) throw error;
+        expectChanged(await supabase.from("guides").update(row).eq("id", id).select("id"));
         return id;
       }
       const { data, error } = await supabase
@@ -105,8 +105,7 @@ export function useDeleteGuide() {
   return useMutation({
     mutationFn: async (guide: Guide) => {
       const supabase = getSupabase();
-      const { error } = await supabase.from("guides").delete().eq("id", guide.id);
-      if (error) throw error;
+      expectChanged(await supabase.from("guides").delete().eq("id", guide.id).select("id"));
       const photos = guide.steps.flatMap((s) => (s.photo ? [s.photo] : []));
       if (photos.length > 0) await supabase.storage.from("guide-photos").remove(photos);
     },

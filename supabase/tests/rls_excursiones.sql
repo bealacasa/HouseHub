@@ -1,7 +1,8 @@
 -- =============================================================================
 -- House Hub · Prueba de seguridad (RLS) de las excursiones
 --
--- Pégalo en el SQL Editor y pulsa Run DESPUÉS de la migración 20261025000010. Funciona
+-- Pégalo en el SQL Editor y pulsa Run DESPUÉS de las migraciones 20261025000010 y
+-- 20261029000013 (toda la familia puede cambiar y borrar). Funciona
 -- con tu casa ya creada: añade dos usuarios ficticios (Marta, miembro, y Bruno, ajeno),
 -- comprueba lo que cada uno puede hacer y al final lo DESHACE TODO (rollback).
 -- Si algo falla, verás un error «FALLO: …». Si todo va bien: «✓ Todas las pruebas OK».
@@ -51,7 +52,7 @@ begin
   exception when sqlstate 'P0001' then null;
   end;
 
-  -- ---- Marta, miembro: ve, añade la suya, no cambia la ajena, sí marca la visita ----
+  -- ---- Marta, miembro: ve, añade, cambia y borra también las ajenas, marca la visita ----
   reset role;
   perform set_config('request.jwt.claims', json_build_object('sub', marta, 'role', 'authenticated')::text, true);
   set local role authenticated;
@@ -65,10 +66,7 @@ begin
 
   update public.excursions set title = 'Cambiada' where id = other_exc;
   get diagnostics n = row_count;
-  if n <> 0 then raise exception 'FALLO: Marta cambió una excursión ajena' using errcode = 'TF001'; end if;
-  delete from public.excursions where id = other_exc;
-  get diagnostics n = row_count;
-  if n <> 0 then raise exception 'FALLO: Marta borró una excursión ajena' using errcode = 'TF001'; end if;
+  if n <> 1 then raise exception 'FALLO: Marta no pudo cambiar una excursión ajena' using errcode = 'TF001'; end if;
 
   perform public.mark_excursion_visited(other_exc, current_date);
   select count(*) into n from public.excursions where id = other_exc and last_visited = current_date;
@@ -91,6 +89,10 @@ begin
     raise exception 'FALLO: se aceptó una foto de otra casa' using errcode = 'TF001';
   exception when check_violation then null;
   end;
+
+  delete from public.excursions where id = other_exc;
+  get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FALLO: Marta no pudo borrar una excursión ajena' using errcode = 'TF001'; end if;
 
   reset role;
   raise notice '✓ Todas las pruebas OK';

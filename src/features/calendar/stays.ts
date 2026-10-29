@@ -12,6 +12,7 @@ import {
 import { es } from "date-fns/locale";
 import { z } from "zod";
 import { getSupabase } from "@/lib/supabase";
+import { expectChanged } from "@/lib/write";
 
 /** Fechas siempre como "YYYY-MM-DD" (día local, sin hora). */
 export type DateKey = string;
@@ -159,9 +160,11 @@ export function useSaveStay(houseId: string) {
         note: s.note,
       };
       const supabase = getSupabase();
-      const { error } = id
-        ? await supabase.from("stays").update(row).eq("id", id)
-        : await supabase.from("stays").insert({ house_id: houseId, ...row });
+      if (id) {
+        expectChanged(await supabase.from("stays").update(row).eq("id", id).select("id"));
+        return;
+      }
+      const { error } = await supabase.from("stays").insert({ house_id: houseId, ...row });
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: staysKey }),
@@ -172,8 +175,7 @@ export function useDeleteStay() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await getSupabase().from("stays").delete().eq("id", id);
-      if (error) throw error;
+      expectChanged(await getSupabase().from("stays").delete().eq("id", id).select("id"));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: staysKey }),
   });

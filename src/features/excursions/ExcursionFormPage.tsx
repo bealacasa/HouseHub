@@ -75,7 +75,7 @@ type DraftPhoto = ExcursionPhoto & { key: string };
 const draft = (p: ExcursionPhoto): DraftPhoto => ({ ...p, key: crypto.randomUUID() });
 
 function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multiPhoto: boolean }) {
-  const { house, me, isAdmin } = useHouse();
+  const { house } = useHouse();
   const navigate = useNavigate();
   const [dialog, confirm] = useConfirm();
   const photoInput = useId();
@@ -93,7 +93,6 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
   const coverUrl = useExcursionPhotoUrl(cover);
   const save = useSaveExcursion(house.id);
   const remove = useDeleteExcursion();
-  const canEdit = !excursion || isAdmin || excursion.createdBy === me.userId;
   const back = excursion ? `/excursiones/${excursion.id}` : "/excursiones";
 
   async function onCoverFile(file: File) {
@@ -184,7 +183,7 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
       </Link>
       <PageTitle title={excursion ? "Cambiar la excursión" : "Nueva excursión"} />
       <form noValidate onSubmit={onSubmit} className="space-y-5">
-        <fieldset disabled={!canEdit} className="space-y-5">
+        <fieldset className="space-y-5">
           <FormSection>
             <div>
               <label htmlFor="exc-title" className={fieldLabel}>
@@ -392,26 +391,20 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
         {(error || save.error || remove.error) && (
           <ErrorMessage>{error ?? errorMessage(save.error ?? remove.error)}</ErrorMessage>
         )}
-        {canEdit ? (
-          <>
-            <button
-              type="submit"
-              disabled={save.isPending || uploading !== null}
-              className={buttonPrimary}
-            >
-              {save.isPending ? "Guardando…" : excursion ? "Guardar cambios" : "Añadir excursión"}
+        <>
+          <button
+            type="submit"
+            disabled={save.isPending || uploading !== null}
+            className={buttonPrimary}
+          >
+            {save.isPending ? "Guardando…" : excursion ? "Guardar cambios" : "Añadir excursión"}
+          </button>
+          {excursion && (
+            <button type="button" onClick={() => void onDelete()} className={buttonDanger}>
+              Borrar la excursión
             </button>
-            {excursion && (
-              <button type="button" onClick={() => void onDelete()} className={buttonDanger}>
-                Borrar la excursión
-              </button>
-            )}
-          </>
-        ) : (
-          <p className="text-lg text-muted">
-            Solo quien la añadió (o quien administra) puede cambiarla.
-          </p>
-        )}
+          )}
+        </>
       </form>
       {dialog}
     </>

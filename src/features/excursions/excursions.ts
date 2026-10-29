@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { processImage } from "@/lib/image";
 import { getSupabase } from "@/lib/supabase";
+import { expectChanged } from "@/lib/write";
 import type { DateKey } from "@/features/calendar/stays";
 
 /*
@@ -200,8 +201,9 @@ export function useSaveExcursion(houseId: string) {
       if (multiPhoto) row.photos = e.photos;
       const supabase = getSupabase();
       if (id) {
-        const { error } = await supabase.from("excursions").update(row).eq("id", id);
-        if (error) throw notReadyOr(error);
+        const result = await supabase.from("excursions").update(row).eq("id", id).select("id");
+        if (result.error) throw notReadyOr(result.error);
+        expectChanged(result);
         return id;
       }
       const { data, error } = await supabase
@@ -236,8 +238,7 @@ export function useDeleteExcursion() {
   return useMutation({
     mutationFn: async (excursion: Excursion) => {
       const supabase = getSupabase();
-      const { error } = await supabase.from("excursions").delete().eq("id", excursion.id);
-      if (error) throw error;
+      expectChanged(await supabase.from("excursions").delete().eq("id", excursion.id).select("id"));
       const paths = [
         ...(excursion.cover ? [excursion.cover] : []),
         ...excursion.photos.map((p) => p.path),

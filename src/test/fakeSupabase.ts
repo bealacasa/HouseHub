@@ -19,6 +19,10 @@ export function installFakeSupabase(
     missingTables?: string[];
     /** Columnas sin crear: leerlas da 42703 y escribirlas PGRST204, como en Supabase. */
     missingColumns?: Record<string, string[]>;
+    /** Papel de la usuaria en la casa (por defecto, administradora). */
+    role?: "admin" | "member";
+    /** Tablas donde RLS no deja cambiar ni borrar: no hay error, pero no toca ninguna fila. */
+    lockedTables?: string[];
   } = {},
 ) {
   const user = { id: "11111111-1111-4111-8111-111111111111", email: "ana@example.com" };
@@ -111,7 +115,7 @@ export function installFakeSupabase(
       house_id: HOUSE_ID,
       user_id: user.id,
       display_name: options.name ?? "Ana",
-      role: "admin",
+      role: options.role ?? "admin",
     });
   }
 
@@ -211,6 +215,16 @@ export function installFakeSupabase(
     invoke: vi.fn(async (_name: string, _opts: unknown) => ok({ houseId: "h" })),
   };
 
+  /** Respuesta de update/delete: se puede esperar o encadenar .select("id") (filas tocadas). */
+  function changedResult(changed: Row[]) {
+    return {
+      select: async () => ok(changed.map((r) => ({ id: r.id }))),
+      then<T>(resolve: (v: { error: null }) => T) {
+        return Promise.resolve({ error: null }).then(resolve);
+      },
+    };
+  }
+
   /** Consulta que siempre responde con ese error (tabla o columna que no existe). */
   function failing(code: string) {
     const missing = { data: null, error: { code, message: "not found" } };
@@ -265,15 +279,19 @@ export function installFakeSupabase(
           usesMissing(Object.keys(changes))
             ? failing("PGRST204")
             : {
-                eq: async (col: string, value: unknown) => {
-                  for (const r of rows(table)) if (r[col] === value) Object.assign(r, changes);
-                  return { error: null };
+                eq: (col: string, value: unknown) => {
+                  if (options.lockedTables?.includes(table)) return changedResult([]);
+                  const changed = rows(table).filter((r) => r[col] === value);
+                  for (const r of changed) Object.assign(r, changes);
+                  return changedResult(changed);
                 },
               },
         delete: () => ({
-          eq: async (col: string, value: unknown) => {
+          eq: (col: string, value: unknown) => {
+            if (options.lockedTables?.includes(table)) return changedResult([]);
+            const removed = rows(table).filter((r) => r[col] === value);
             tables[table] = rows(table).filter((r) => r[col] !== value);
-            return { error: null };
+            return changedResult(removed);
           },
         }),
       };

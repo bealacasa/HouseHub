@@ -50,7 +50,7 @@ function daysLabel(start: string, end: string): string {
 const label = "mb-2 block text-xl font-semibold";
 
 function EventForm({ event }: { event?: VillageEvent }) {
-  const { house, me, isAdmin } = useHouse();
+  const { house } = useHouse();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [dialog, confirm] = useConfirm();
@@ -63,7 +63,6 @@ function EventForm({ event }: { event?: VillageEvent }) {
   const [error, setError] = useState<string | null>(null);
   const save = useSaveEvent(house.id);
   const remove = useDeleteEvent();
-  const canEdit = !event || isAdmin || event.createdBy === me.userId;
   const validRange = start !== "" && end !== "" && end >= start;
 
   function onSubmit(e: React.FormEvent) {
@@ -101,7 +100,7 @@ function EventForm({ event }: { event?: VillageEvent }) {
         subtitle="Fiestas, mercado, procesiones…"
       />
       <form noValidate onSubmit={onSubmit} className="space-y-5">
-        <fieldset disabled={!canEdit} className="space-y-5">
+        <fieldset className="space-y-5">
           <Card>
             <label htmlFor="ev-title" className={label}>
               ¿Qué es?
@@ -171,22 +170,16 @@ function EventForm({ event }: { event?: VillageEvent }) {
         {(error || save.error || remove.error) && (
           <ErrorMessage>{error ?? errorMessage(save.error ?? remove.error)}</ErrorMessage>
         )}
-        {canEdit ? (
-          <>
-            <button type="submit" disabled={save.isPending} className={buttonPrimary}>
-              {save.isPending ? "Guardando…" : event ? "Guardar cambios" : "Añadir evento"}
+        <>
+          <button type="submit" disabled={save.isPending} className={buttonPrimary}>
+            {save.isPending ? "Guardando…" : event ? "Guardar cambios" : "Añadir evento"}
+          </button>
+          {event && (
+            <button type="button" onClick={() => void onDelete()} className={buttonDanger}>
+              Borrar el evento
             </button>
-            {event && (
-              <button type="button" onClick={() => void onDelete()} className={buttonDanger}>
-                Borrar el evento
-              </button>
-            )}
-          </>
-        ) : (
-          <p className="text-lg text-muted">
-            Solo quien lo añadió (o quien administra) puede cambiarlo.
-          </p>
-        )}
+          )}
+        </>
       </form>
       {dialog}
     </>

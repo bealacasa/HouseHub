@@ -261,7 +261,6 @@ function RecurringCard({
   expenses: Expense[];
   members: readonly Member[];
 }) {
-  const { me, isAdmin } = useHouse();
   const stop = useStopRecurring();
   const [dialog, confirm] = useConfirm();
   if (recurring.length === 0) return null;
@@ -310,7 +309,7 @@ function RecurringCard({
                 ) : (
                   <div className="px-4 py-3">
                     <div className="flex items-center gap-3">{body}</div>
-                    {(isAdmin || r.createdBy === me.userId) && (
+                    {
                       <button
                         type="button"
                         disabled={stop.isPending}
@@ -319,7 +318,7 @@ function RecurringCard({
                       >
                         Dejar de repetir
                       </button>
-                    )}
+                    }
                   </div>
                 )}
               </li>
@@ -434,7 +433,6 @@ function PaymentHistory({
   settlements: Settlement[];
   members: readonly Member[];
 }) {
-  const { me, isAdmin } = useHouse();
   const remove = useDeleteSettlement();
   const [dialog, confirm] = useConfirm();
   if (settlements.length === 0) {
@@ -480,7 +478,7 @@ function PaymentHistory({
                       <span className="block text-lg font-extrabold tabular-nums">
                         {formatEuros(s.cents)}
                       </span>
-                      {(isAdmin || s.createdBy === me.userId) && (
+                      {
                         <button
                           type="button"
                           disabled={remove.isPending}
@@ -490,7 +488,7 @@ function PaymentHistory({
                         >
                           Borrar
                         </button>
-                      )}
+                      }
                     </span>
                   </li>
                 );

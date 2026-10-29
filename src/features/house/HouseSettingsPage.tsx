@@ -16,9 +16,8 @@ import { errorMessage, useUpdateHouse } from "./house";
 import { useHouse } from "./HouseGate";
 import { useHousePhotoUrl, useSetHousePhoto } from "./photo";
 
-/** Datos de la casa. Los miembros los ven; solo los administradores los cambian. */
+/** Datos de la casa: cualquiera de la familia los ve y los cambia. */
 export function HouseSettingsPage() {
-  const { house, isAdmin } = useHouse();
   return (
     <>
       <Link to="/casa" className={backLink}>
@@ -27,22 +26,14 @@ export function HouseSettingsPage() {
       <PageTitle title="La casa" />
       <div className="space-y-4">
         <PhotoCard />
-        {isAdmin ? (
-          <HouseForm />
-        ) : (
-          <Card>
-            <h2 className="text-2xl font-bold">{house.name}</h2>
-            {house.address && <p className="mt-2 text-lg">{house.address}</p>}
-            {house.notes && <p className="mt-3 whitespace-pre-line text-lg">{house.notes}</p>}
-          </Card>
-        )}
+        <HouseForm />
       </div>
     </>
   );
 }
 
 function PhotoCard() {
-  const { house, isAdmin } = useHouse();
+  const { house } = useHouse();
   const url = useHousePhotoUrl(house.photoPath);
   const setPhoto = useSetHousePhoto(house.id, house.photoPath);
   const inputId = useId();
@@ -53,7 +44,6 @@ function PhotoCard() {
         ? errorMessage(setPhoto.error)
         : null;
 
-  if (!isAdmin && !house.photoPath) return null;
   return (
     <Card>
       {url.data ? (
@@ -65,7 +55,7 @@ function PhotoCard() {
       ) : (
         <p className="text-lg text-muted">Aún no hay foto de la casa.</p>
       )}
-      {isAdmin && (
+      {
         <div className="mt-4 space-y-3">
           <label htmlFor={inputId} className={`${buttonSecondary} cursor-pointer`}>
             {setPhoto.isPending
@@ -90,7 +80,7 @@ function PhotoCard() {
           </p>
           {error && <ErrorMessage>{error}</ErrorMessage>}
         </div>
-      )}
+      }
     </Card>
   );
 }

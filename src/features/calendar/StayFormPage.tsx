@@ -46,7 +46,7 @@ export function StayFormPage() {
 }
 
 function StayForm({ stay, all }: { stay?: Stay; all: Stay[] }) {
-  const { house, members, me, isAdmin, session } = useHouseAndSession();
+  const { house, members, me } = useHouse();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [dialog, confirm] = useConfirm();
@@ -59,7 +59,6 @@ function StayForm({ stay, all }: { stay?: Stay; all: Stay[] }) {
   const [error, setError] = useState<string | null>(null);
   const save = useSaveStay(house.id);
   const remove = useDeleteStay();
-  const canEdit = !stay || isAdmin || stay.createdBy === session;
   const nameOf = (mid: string) => members.find((m) => m.id === mid)?.displayName ?? "Alguien";
 
   const clashes = start && end && end >= start ? overlapping(all, { start, end }, stay?.id) : [];
@@ -104,7 +103,7 @@ function StayForm({ stay, all }: { stay?: Stay; all: Stay[] }) {
       </Link>
       <PageTitle title={stay ? "La reserva" : "Reservar unos días"} />
       <form noValidate onSubmit={(e) => void onSubmit(e)} className="space-y-5">
-        <fieldset disabled={!canEdit} className="space-y-4">
+        <fieldset className="space-y-4">
           {/* Elegir tocando la foto: más fácil que un desplegable. */}
           <FormSection title="¿Quién va?" as="fieldset">
             <MemberPicker name="stay-who" value={memberId} onChange={setMemberId} />
@@ -173,22 +172,16 @@ function StayForm({ stay, all }: { stay?: Stay; all: Stay[] }) {
         {(error || save.error || remove.error) && (
           <ErrorMessage>{error ?? errorMessage(save.error ?? remove.error)}</ErrorMessage>
         )}
-        {canEdit ? (
-          <>
-            <button type="submit" disabled={save.isPending} className={buttonPrimary}>
-              {save.isPending ? "Guardando…" : stay ? "Guardar cambios" : "Reservar"}
+        <>
+          <button type="submit" disabled={save.isPending} className={buttonPrimary}>
+            {save.isPending ? "Guardando…" : stay ? "Guardar cambios" : "Reservar"}
+          </button>
+          {stay && (
+            <button type="button" onClick={() => void onDelete()} className={buttonDanger}>
+              Borrar la reserva
             </button>
-            {stay && (
-              <button type="button" onClick={() => void onDelete()} className={buttonDanger}>
-                Borrar la reserva
-              </button>
-            )}
-          </>
-        ) : (
-          <p className="text-lg text-muted">
-            Solo quien hizo la reserva (o quien administra) puede cambiarla.
-          </p>
-        )}
+          )}
+        </>
       </form>
       {dialog}
     </>
@@ -196,7 +189,3 @@ function StayForm({ stay, all }: { stay?: Stay; all: Stay[] }) {
 }
 
 /** La casa y el id del usuario con sesión (para saber si la reserva es suya). */
-function useHouseAndSession() {
-  const house = useHouse();
-  return { ...house, session: house.me.userId };
-}

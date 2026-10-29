@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { processImage } from "@/lib/image";
 import { getSupabase } from "@/lib/supabase";
+import { expectChanged } from "@/lib/write";
 import { houseKey } from "./house";
 
 const BUCKET = "house-photos";
@@ -39,11 +40,9 @@ export function useSetHousePhoto(houseId: string, previous: string | null) {
           .upload(path, blob, { contentType: blob.type, upsert: false });
         if (error) throw error;
       }
-      const { error } = await supabase
-        .from("houses")
-        .update({ photo_path: path })
-        .eq("id", houseId);
-      if (error) throw error;
+      expectChanged(
+        await supabase.from("houses").update({ photo_path: path }).eq("id", houseId).select("id"),
+      );
       if (previous) await supabase.storage.from(BUCKET).remove([previous]);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: houseKey }),

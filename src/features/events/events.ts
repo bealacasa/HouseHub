@@ -3,6 +3,7 @@ import { addDays } from "date-fns";
 import { z } from "zod";
 import { toKey, type DateKey } from "@/features/calendar/stays";
 import { getSupabase } from "@/lib/supabase";
+import { expectChanged } from "@/lib/write";
 
 /** Evento del pueblo: fiestas, mercado, procesión… De un día o de varios. */
 export type VillageEvent = {
@@ -89,9 +90,11 @@ export function useSaveEvent(houseId: string) {
         note: e.note,
       };
       const supabase = getSupabase();
-      const { error } = id
-        ? await supabase.from("village_events").update(row).eq("id", id)
-        : await supabase.from("village_events").insert({ house_id: houseId, ...row });
+      if (id) {
+        expectChanged(await supabase.from("village_events").update(row).eq("id", id).select("id"));
+        return;
+      }
+      const { error } = await supabase.from("village_events").insert({ house_id: houseId, ...row });
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: eventsKey }),
@@ -102,8 +105,7 @@ export function useDeleteEvent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await getSupabase().from("village_events").delete().eq("id", id);
-      if (error) throw error;
+      expectChanged(await getSupabase().from("village_events").delete().eq("id", id).select("id"));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: eventsKey }),
   });

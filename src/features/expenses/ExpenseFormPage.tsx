@@ -54,7 +54,7 @@ export function ExpenseFormPage() {
 const centsToInput = (c: number) => (c / 100).toFixed(2).replace(".", ",");
 
 function ExpenseForm({ expense, initialRepeat }: { expense?: Expense; initialRepeat: number }) {
-  const { members, me, isAdmin } = useHouse();
+  const { members, me } = useHouse();
   const navigate = useNavigate();
   const [dialog, confirm] = useConfirm();
   const [amountText, setAmountText] = useState(expense ? centsToInput(expense.amount) : "");
@@ -81,7 +81,6 @@ function ExpenseForm({ expense, initialRepeat }: { expense?: Expense; initialRep
   const [error, setError] = useState<string | null>(null);
   const save = useSaveExpense();
   const remove = useDeleteExpense();
-  const canEdit = !expense || isAdmin || expense.createdBy === me.userId;
 
   const amount = parseEuros(amountText);
   const ordered = members.map((m) => m.id).filter((id) => between.includes(id));
@@ -147,7 +146,7 @@ function ExpenseForm({ expense, initialRepeat }: { expense?: Expense; initialRep
       </Link>
       <PageTitle title={expense ? "El gasto" : "Apuntar un gasto"} />
       <form noValidate onSubmit={onSubmit} className="space-y-5">
-        <fieldset disabled={!canEdit} className="space-y-4">
+        <fieldset className="space-y-4">
           {/* El importe, grande y en el centro: es lo más importante. */}
           <section className="rounded-[2rem] bg-linear-to-br from-accent to-accent-2 p-5 text-center text-accent-contrast shadow-xl shadow-accent/20">
             <label htmlFor="ex-amount" className="block text-lg font-semibold opacity-90">
@@ -353,22 +352,16 @@ function ExpenseForm({ expense, initialRepeat }: { expense?: Expense; initialRep
         {(error || save.error || remove.error) && (
           <ErrorMessage>{error ?? errorMessage(save.error ?? remove.error)}</ErrorMessage>
         )}
-        {canEdit ? (
-          <>
-            <button type="submit" disabled={save.isPending} className={buttonPrimary}>
-              {save.isPending ? "Guardando…" : expense ? "Guardar cambios" : "Apuntar gasto"}
+        <>
+          <button type="submit" disabled={save.isPending} className={buttonPrimary}>
+            {save.isPending ? "Guardando…" : expense ? "Guardar cambios" : "Apuntar gasto"}
+          </button>
+          {expense && (
+            <button type="button" onClick={() => void onDelete()} className={buttonDanger}>
+              Borrar el gasto
             </button>
-            {expense && (
-              <button type="button" onClick={() => void onDelete()} className={buttonDanger}>
-                Borrar el gasto
-              </button>
-            )}
-          </>
-        ) : (
-          <p className="text-lg text-muted">
-            Solo quien lo apuntó (o quien administra) puede cambiarlo.
-          </p>
-        )}
+          )}
+        </>
       </form>
       {dialog}
     </>

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { toKey } from "@/features/calendar/stays";
 import { getSupabase } from "@/lib/supabase";
+import { expectChanged } from "@/lib/write";
 import { MAX_CENTS } from "./money";
 
 export const CATEGORIES = {
@@ -250,15 +251,15 @@ export function useSaveExpense() {
 /** Dejar de repetir un gasto periódico (los ya apuntados se quedan). */
 export function useStopRecurring() {
   return useLedgerMutation(async (id: string) => {
-    const { error } = await getSupabase().from("recurring_expenses").delete().eq("id", id);
-    if (error) throw error;
+    expectChanged(
+      await getSupabase().from("recurring_expenses").delete().eq("id", id).select("id"),
+    );
   });
 }
 
 export function useDeleteExpense() {
   return useLedgerMutation(async (id: string) => {
-    const { error } = await getSupabase().from("expenses").delete().eq("id", id);
-    if (error) throw error;
+    expectChanged(await getSupabase().from("expenses").delete().eq("id", id).select("id"));
   });
 }
 
@@ -280,7 +281,6 @@ export function useSettle(houseId: string) {
 
 export function useDeleteSettlement() {
   return useLedgerMutation(async (id: string) => {
-    const { error } = await getSupabase().from("settlements").delete().eq("id", id);
-    if (error) throw error;
+    expectChanged(await getSupabase().from("settlements").delete().eq("id", id).select("id"));
   });
 }
