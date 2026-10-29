@@ -21,7 +21,6 @@ import { useHouse } from "@/features/house/HouseGate";
 import { useHousePhotoUrl } from "@/features/house/photo";
 import { useNotes } from "@/features/notes/notes";
 import { dueLabel, useReminders } from "@/features/reminders/reminders";
-import { currentSeason } from "@/lib/season";
 import { InstallCard } from "@/pwa/InstallCard";
 
 /**
@@ -33,7 +32,6 @@ export function HomePage() {
   const { house, members, isAdmin } = useHouse();
   const photo = useHousePhotoUrl(house.photoPath);
   const onlyMe = members.length === 1;
-  const halloween = currentSeason() === "halloween";
 
   return (
     <>
@@ -57,19 +55,8 @@ export function HomePage() {
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight">
             Hola, {profile.displayName}
           </h1>
-          {halloween && (
-            <p className="mt-2 text-xl font-bold">
-              <span aria-hidden="true">🎃 </span>¡Feliz Halloween!
-            </p>
-          )}
           <InTheHouse />
         </div>
-        {/* Adorno de temporada (solo decoración). */}
-        {halloween && (
-          <span aria-hidden="true" className="absolute right-4 top-3 text-3xl">
-            🦇
-          </span>
-        )}
       </header>
       <QuickActions />
       <div className="mt-6 space-y-6">

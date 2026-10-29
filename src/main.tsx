@@ -5,13 +5,6 @@ import { RouterProvider } from "react-router/dom";
 import { router } from "./app/router";
 import { isSupabaseConfigured } from "./lib/supabase";
 import "./index.css";
-import { applySeason } from "./lib/season";
-
-// Tema de temporada por fecha; se revisa al volver a la app (por si cambia el día).
-applySeason();
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") applySeason();
-});
 
 const root = document.getElementById("root");
 if (!root) throw new Error("No se encontró #root");

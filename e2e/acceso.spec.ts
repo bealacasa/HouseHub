@@ -48,20 +48,9 @@ test.describe("pantalla de acceso", () => {
   });
 
   test("modo oscuro automático", async ({ page }) => {
-    // Fecha fija fuera de cualquier tema de temporada (src/lib/season.ts).
-    await page.clock.setFixedTime(new Date("2026-06-15T12:00:00"));
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/acceso");
     const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
     expect(bg).toBe("rgb(15, 17, 21)");
-  });
-
-  test("tema de Halloween solo en sus fechas, también en oscuro", async ({ page }) => {
-    await page.clock.setFixedTime(new Date("2026-10-31T12:00:00"));
-    await page.emulateMedia({ colorScheme: "dark" });
-    await page.goto("/acceso");
-    expect(await page.evaluate(() => document.documentElement.dataset.season)).toBe("halloween");
-    const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    expect(bg).toBe("rgb(18, 13, 22)");
   });
 });

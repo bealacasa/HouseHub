@@ -2,7 +2,6 @@ import { Link, Outlet, useLocation } from "react-router";
 import { Avatar } from "@/components/Avatar";
 import { CalendarIcon, EuroIcon, HomeIcon, KeyIcon, MapIcon } from "@/components/icons";
 import { useHouse } from "@/features/house/HouseGate";
-import { currentSeason } from "@/lib/season";
 import { UpdatePrompt } from "@/pwa/UpdatePrompt";
 
 /**
@@ -40,11 +39,7 @@ export function Layout() {
             aria-hidden="true"
             className="grid size-10 shrink-0 place-items-center rounded-2xl bg-linear-to-br from-accent to-accent-2 text-accent-contrast shadow-md shadow-accent/25 max-[399px]:hidden"
           >
-            {currentSeason() === "halloween" ? (
-              <span className="text-2xl leading-none">🎃</span>
-            ) : (
-              <HomeIcon className="size-6" />
-            )}
+            <HomeIcon className="size-6" />
           </span>
           <span className="min-w-0 flex-1 truncate">{house.name}</span>
           {/* Familia y ajustes: con tu foto, siempre a mano y con texto. */}
