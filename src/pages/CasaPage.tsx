@@ -1,9 +1,31 @@
-import { BellIcon, BookIcon, HomeIcon, ListIcon } from "@/components/icons";
+import {
+  BellIcon,
+  BookIcon,
+  DoorIcon,
+  HomeIcon,
+  KeyIcon,
+  ListIcon,
+  PhoneIcon,
+} from "@/components/icons";
 import { HubGrid } from "@/components/HubGrid";
 import { Card, PageTitle } from "@/components/ui";
 import { useHouse } from "@/features/house/HouseGate";
 
 const ITEMS = [
+  {
+    to: "/llegar",
+    Icon: KeyIcon,
+    label: "Al llegar",
+    hint: "Abrir la casa",
+    tint: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
+  },
+  {
+    to: "/irse",
+    Icon: DoorIcon,
+    label: "Al irse",
+    hint: "Cerrar la casa",
+    tint: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200",
+  },
   {
     to: "/instrucciones",
     Icon: BookIcon,
@@ -24,6 +46,13 @@ const ITEMS = [
     label: "Mis recordatorios",
     hint: "🔒 Solo los ves tú",
     tint: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200",
+  },
+  {
+    to: "/contactos",
+    Icon: PhoneIcon,
+    label: "Contactos",
+    hint: "Emergencias y teléfonos",
+    tint: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200",
   },
   {
     to: "/casa/datos",

@@ -111,6 +111,36 @@ export const router = createBrowserRouter([
         lazy: async () => ({ Component: (await import("@/features/notes/NotesPage")).NotesPage }),
       },
       {
+        path: "llegar",
+        lazy: async () => ({
+          Component: (await import("@/features/checklists/ChecklistPage")).ArriveChecklistPage,
+        }),
+      },
+      {
+        path: "irse",
+        lazy: async () => ({
+          Component: (await import("@/features/checklists/ChecklistPage")).LeaveChecklistPage,
+        }),
+      },
+      {
+        path: "contactos",
+        lazy: async () => ({
+          Component: (await import("@/features/contacts/ContactsPage")).ContactsPage,
+        }),
+      },
+      {
+        path: "contactos/nuevo",
+        lazy: async () => ({
+          Component: (await import("@/features/contacts/ContactFormPage")).ContactFormPage,
+        }),
+      },
+      {
+        path: "contactos/:id",
+        lazy: async () => ({
+          Component: (await import("@/features/contacts/ContactFormPage")).ContactFormPage,
+        }),
+      },
+      {
         path: "recordatorios",
         lazy: async () => ({
           Component: (await import("@/features/reminders/RemindersPage")).RemindersPage,

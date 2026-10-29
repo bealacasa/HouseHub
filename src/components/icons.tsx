@@ -99,3 +99,15 @@ export const BellIcon = (p: IconProps) => (
     <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2ZM10 21h4" />
   </Svg>
 );
+
+export const PhoneIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5 3h3l2 5-2.5 1.5a11 11 0 0 0 7 7L16 14l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2Z" />
+  </Svg>
+);
+
+export const DoorIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17M3 21h18M15 12h.01" />
+  </Svg>
+);
