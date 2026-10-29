@@ -22,15 +22,15 @@ function renderAt(path: string) {
 const day = (n: number) => toKey(addDays(new Date(), n));
 
 describe("inicio", () => {
-  it("«Hoy» junta la lista de llegada, tus recordatorios y las notas pendientes", async () => {
+  it("«Hoy» junta la lista para irse, tus recordatorios y las notas pendientes", async () => {
     const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
     const house = fake.tables.houses![0]!.id;
     const me = String(fake.tables.house_members![0]!.id);
     fake.tables.stays!.push({
       id: "55555555-5555-4555-8555-555555555551",
       member_id: me,
-      start_date: day(0),
-      end_date: day(3),
+      start_date: day(-3),
+      end_date: day(0),
       people: 2,
       note: "",
       created_by: null,
@@ -65,12 +65,15 @@ describe("inicio", () => {
     });
     renderAt("/");
     const hoy = (await screen.findByRole("heading", { name: "Hoy" })).closest("section")!;
-    expect(await within(hoy).findByRole("link", { name: /Lista para abrir la casa/ })).toBeTruthy();
+    expect(
+      await within(hoy).findByRole("link", { name: /Lista para cerrar la casa/ }),
+    ).toBeTruthy();
     expect(await within(hoy).findByText("Pagar el gimnasio")).toBeTruthy();
     expect(within(hoy).getByText("Era para ayer")).toBeTruthy();
     expect(within(hoy).queryByText("Para la semana que viene")).toBeNull();
     expect(within(hoy).getByText("1 nota pendiente")).toBeTruthy();
-    expect(screen.getByText(/En la casa: Ana/)).toBeTruthy();
+    expect(screen.getByText(/En la casa: Ana \(se va hoy\)/)).toBeTruthy();
+    expect(screen.queryByText(/Lista para abrir la casa/)).toBeNull();
   });
 
   it("sin nada para hoy lo dice, y no enseña excursiones ni eventos del pueblo", async () => {

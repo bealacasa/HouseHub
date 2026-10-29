@@ -5,28 +5,14 @@ import { getSupabase } from "@/lib/supabase";
 import { expectChanged } from "@/lib/write";
 
 /*
- * Listas para llegar e irse: la familia las escribe una vez; al llegar o al irse se van
- * tachando (en este móvil) y, al terminar, se apunta quién y cuándo.
+ * Lista para irse (cerrar la casa): la familia la escribe una vez; al irse se va tachando
+ * (en este móvil) y, al terminar, se apunta quién y cuándo. La base de datos admite también
+ * una lista «al llegar» (kind = 'arrive'), que de momento la app no usa.
  */
 
-export type ChecklistKind = "arrive" | "leave";
+export type ChecklistKind = "leave";
 
 export const CHECKLISTS = {
-  arrive: {
-    path: "/llegar",
-    title: "Al llegar a la casa",
-    short: "Al llegar",
-    done: "¡Casa abierta!",
-    lastVerb: "abrió la casa",
-    defaults: [
-      "Abrir la llave del agua",
-      "Subir el diferencial (la luz general)",
-      "Encender el calentador",
-      "Enchufar la nevera",
-      "Abrir ventanas para ventilar",
-      "Mirar si hay goteras o humedades",
-    ],
-  },
   leave: {
     path: "/irse",
     title: "Al irse de la casa",

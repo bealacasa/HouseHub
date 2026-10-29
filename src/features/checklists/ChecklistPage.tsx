@@ -32,10 +32,9 @@ import {
   type ChecklistKind,
 } from "./checklists";
 
-export const ArriveChecklistPage = () => <ChecklistPage kind="arrive" />;
 export const LeaveChecklistPage = () => <ChecklistPage kind="leave" />;
 
-/** Lista para llegar o irse: tachar una a una y «Terminado»; o cambiar la lista. */
+/** Lista para irse: tachar una a una y «Terminado»; o cambiar la lista. */
 function ChecklistPage({ kind }: { kind: ChecklistKind }) {
   const info = CHECKLISTS[kind];
   const items = useChecklist(kind);

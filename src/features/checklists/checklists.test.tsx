@@ -19,7 +19,7 @@ function renderAt(path: string) {
   return memory;
 }
 
-describe("listas para llegar e irse", () => {
+describe("lista para irse", () => {
   it("vacía, se empieza con las típicas, se tacha y al terminar se apunta", async () => {
     localStorage.removeItem("househub:checklist:leave");
     const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
@@ -53,21 +53,21 @@ describe("listas para llegar e irse", () => {
     fake.tables.checklist_items!.push({
       id: "cccccccc-cccc-4ccc-8ccc-000000000001",
       house_id: house,
-      kind: "arrive",
-      text: "Abrir la llave del agua",
+      kind: "leave",
+      text: "Cerrar la llave del gas",
       position: 1,
     });
     fake.tables.checklist_runs!.push({
       id: "dddddddd-dddd-4ddd-8ddd-000000000001",
       house_id: house,
-      kind: "arrive",
+      kind: "leave",
       user_id: fake.user.id,
       checked: 1,
       total: 1,
       finished_at: "2026-10-26T10:00:00Z",
     });
-    renderAt("/llegar");
-    expect(await screen.findByText(/Ana abrió la casa el lunes 26 de octubre/)).toBeTruthy();
+    renderAt("/irse");
+    expect(await screen.findByText(/Ana cerró la casa el lunes 26 de octubre/)).toBeTruthy();
     expect(screen.getByText("(✓ todo)")).toBeTruthy();
   });
 
@@ -77,13 +77,13 @@ describe("listas para llegar e irse", () => {
     const item = (n: number, text: string) => ({
       id: `cccccccc-cccc-4ccc-8ccc-00000000000${n}`,
       house_id: house,
-      kind: "arrive",
+      kind: "leave",
       text,
       position: n,
     });
-    fake.tables.checklist_items!.push(item(1, "Abrir el agua"), item(2, "Subir la luz"));
+    fake.tables.checklist_items!.push(item(1, "Cerrar el agua"), item(2, "Bajar persianas"));
     const user = userEvent.setup();
-    renderAt("/llegar");
+    renderAt("/irse");
     await user.click(await screen.findByRole("button", { name: "✏️ Cambiar la lista" }));
     await user.type(screen.getByLabelText("Añadir a la lista"), "Regar las plantas");
     await user.click(screen.getByRole("button", { name: "+ Añadir" }));
@@ -93,11 +93,13 @@ describe("listas para llegar e irse", () => {
       position: 3,
     });
 
-    await user.click(await screen.findByRole("button", { name: "Subir «Subir la luz»" }));
+    await user.click(await screen.findByRole("button", { name: "Subir «Bajar persianas»" }));
     await vi.waitFor(() =>
-      expect(fake.tables.checklist_items!.find((i) => i.text === "Subir la luz")!.position).toBe(1),
+      expect(fake.tables.checklist_items!.find((i) => i.text === "Bajar persianas")!.position).toBe(
+        1,
+      ),
     );
-    await user.click(await screen.findByRole("button", { name: "Quitar «Abrir el agua»" }));
+    await user.click(await screen.findByRole("button", { name: "Quitar «Cerrar el agua»" }));
     await vi.waitFor(() => expect(fake.tables.checklist_items).toHaveLength(2));
   });
 
@@ -108,7 +110,7 @@ describe("listas para llegar e irse", () => {
       house: "Casa",
       missingTables: ["checklist_items", "checklist_runs"],
     });
-    renderAt("/llegar");
+    renderAt("/irse");
     expect(await screen.findByText(/aún no están activadas/)).toBeTruthy();
   });
 });

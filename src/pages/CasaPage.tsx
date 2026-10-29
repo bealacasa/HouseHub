@@ -1,24 +1,9 @@
-import {
-  BellIcon,
-  BookIcon,
-  DoorIcon,
-  HomeIcon,
-  KeyIcon,
-  ListIcon,
-  PhoneIcon,
-} from "@/components/icons";
+import { BellIcon, BookIcon, DoorIcon, HomeIcon, ListIcon, PhoneIcon } from "@/components/icons";
 import { HubGrid } from "@/components/HubGrid";
 import { Card, PageTitle } from "@/components/ui";
 import { useHouse } from "@/features/house/HouseGate";
 
 const ITEMS = [
-  {
-    to: "/llegar",
-    Icon: KeyIcon,
-    label: "Al llegar",
-    hint: "Abrir la casa",
-    tint: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
-  },
   {
     to: "/irse",
     Icon: DoorIcon,

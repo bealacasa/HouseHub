@@ -17,15 +17,7 @@ const TABS = [
     to: "/casa",
     label: "Casa",
     Icon: KeyIcon,
-    paths: [
-      "/casa",
-      "/instrucciones",
-      "/notas",
-      "/recordatorios",
-      "/llegar",
-      "/irse",
-      "/contactos",
-    ],
+    paths: ["/casa", "/instrucciones", "/notas", "/recordatorios", "/irse", "/contactos"],
   },
   { to: "/pueblo", label: "Pueblo", Icon: MapIcon, paths: ["/pueblo", "/eventos", "/excursiones"] },
 ] as const;

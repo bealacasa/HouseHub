@@ -2,7 +2,15 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router";
 import { Avatar } from "@/components/Avatar";
-import { BellIcon, CalendarIcon, EuroIcon, ListIcon, UsersIcon } from "@/components/icons";
+import {
+  BellIcon,
+  CalendarIcon,
+  DoorIcon,
+  EuroIcon,
+  HomeIcon,
+  ListIcon,
+  UsersIcon,
+} from "@/components/icons";
 import { Card, buttonSecondary, cardShadow } from "@/components/ui";
 import { useMe } from "@/features/auth/RequireAuth";
 import { shortDate, staysOn, toKey, useStays } from "@/features/calendar/stays";
@@ -95,7 +103,7 @@ export function HomePage() {
   );
 }
 
-/** «🏠 En la casa: Ana (hasta el sábado)» dentro del saludo. */
+/** «En la casa: Ana (hasta el sábado)» dentro del saludo, con el icono de la casa. */
 function InTheHouse() {
   const { members } = useHouse();
   const stays = useStays();
@@ -110,8 +118,8 @@ function InTheHouse() {
     .sort()
     .at(-1);
   return (
-    <p className="mt-3 text-lg font-semibold">
-      <span aria-hidden="true">🏠 </span>
+    <p className="mt-3 flex items-center gap-2 text-lg font-semibold">
+      <HomeIcon className="size-6 shrink-0" />
       {names.length === 0
         ? "Ahora no hay nadie en la casa"
         : `En la casa: ${listNames(names)}${
@@ -150,6 +158,28 @@ function Section({
 
 type Tone = "normal" | "late" | "accent";
 
+/** Icono de línea en un cuadrado de color: el mismo estilo que los accesos y las pestañas. */
+function IconTile({
+  Icon,
+  tint,
+}: {
+  Icon: (p: { className?: string }) => React.ReactNode;
+  tint: string;
+}) {
+  return (
+    <span className={`grid size-10 place-items-center rounded-xl ${tint}`}>
+      <Icon className="size-6" />
+    </span>
+  );
+}
+
+const TINTS = {
+  leave: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200",
+  reminder: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200",
+  notes: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
+  calendar: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
+} as const;
+
 /** Fila que se toca: icono, texto y una línea de detalle opcional. */
 function Row({
   to,
@@ -167,7 +197,7 @@ function Row({
   return (
     <li>
       <Link to={to} className="flex min-h-16 items-center gap-3 px-4 py-3 active:bg-surface-2">
-        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center text-2xl">
+        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center">
           {icon}
         </span>
         <span className="min-w-0 flex-1">
@@ -195,7 +225,7 @@ function Row({
 }
 
 /**
- * Hoy: las listas de llegar o irse si tu reserva empieza o acaba hoy, tus recordatorios de
+ * Hoy: la lista para cerrar la casa si tu reserva acaba hoy, tus recordatorios de
  * hoy y los que se pasaron (solo los tuyos) y las notas pendientes de la casa.
  */
 function Today() {
@@ -205,27 +235,17 @@ function Today() {
   const notes = useNotes();
   const today = toKey(new Date());
   const mine = (stays.data ?? []).filter((s) => s.memberId === me.id);
-  const arriving = mine.some((s) => s.start === today);
   const leaving = mine.some((s) => s.end === today);
   const dueNow = (reminders.data ?? []).filter((r) => !r.done && r.due !== null && r.due <= today);
   const pending = (notes.data ?? []).filter((n) => !n.done);
   if (!stays.isFetched || !notes.isFetched) return null;
 
   const rows = [
-    arriving && (
-      <Row
-        key="llegar"
-        to="/llegar"
-        icon="🔑"
-        title="¿Has llegado? Lista para abrir la casa"
-        tone="accent"
-      />
-    ),
     leaving && (
       <Row
         key="irse"
         to="/irse"
-        icon="🧳"
+        icon={<IconTile Icon={DoorIcon} tint={TINTS.leave} />}
         title="¿Te vas hoy? Lista para cerrar la casa"
         tone="accent"
       />
@@ -234,7 +254,7 @@ function Today() {
       <Row
         key={r.id}
         to="/recordatorios"
-        icon={<BellIcon className="size-6 text-accent" />}
+        icon={<IconTile Icon={BellIcon} tint={TINTS.reminder} />}
         title={r.text}
         detail={dueLabel(r.due, today) ?? undefined}
         tone={r.due !== null && r.due < today ? "late" : "accent"}
@@ -244,7 +264,7 @@ function Today() {
       <Row
         key="notas"
         to="/notas"
-        icon="📝"
+        icon={<IconTile Icon={ListIcon} tint={TINTS.notes} />}
         title={pending.length === 1 ? "1 nota pendiente" : `${pending.length} notas pendientes`}
         detail={pending
           .slice(0, 2)
@@ -293,7 +313,7 @@ function Upcoming() {
               member ? (
                 <Avatar member={member} members={members} size="sm" />
               ) : (
-                <CalendarIcon className="size-6" />
+                <IconTile Icon={CalendarIcon} tint={TINTS.calendar} />
               )
             }
             title={member?.displayName ?? "Alguien"}
@@ -303,7 +323,7 @@ function Upcoming() {
       })}
       <Row
         to="/calendario"
-        icon={<CalendarIcon className="size-6 text-accent" />}
+        icon={<IconTile Icon={CalendarIcon} tint={TINTS.calendar} />}
         title={next.length === 0 ? "No hay reservas próximas" : "Ver el calendario"}
         detail={next.length === 0 ? "Toca para reservar o ver el calendario" : undefined}
       />
