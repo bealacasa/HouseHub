@@ -41,6 +41,7 @@ describe("notas de la casa", () => {
       id,
       text: id,
       done,
+      important: false,
       createdBy: null,
       createdAt,
     });
@@ -79,5 +80,49 @@ describe("eventos del pueblo", () => {
     await memory.navigate("/eventos");
     expect(await screen.findByRole("heading", { name: "Eventos del pueblo" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /Mercado/ })).toBeTruthy();
+  });
+
+  it("una nota se marca como importante al crearla o después, y va arriba", async () => {
+    const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    const user = userEvent.setup();
+    renderAt("/notas");
+    await user.type(await screen.findByLabelText("Nueva nota"), "Llamar al fontanero");
+    await user.click(screen.getByRole("checkbox", { name: /Es importante/ }));
+    await user.click(screen.getByRole("button", { name: "Añadir nota" }));
+    await vi.waitFor(() => expect(fake.tables.house_notes).toHaveLength(1));
+    expect(fake.tables.house_notes![0]).toMatchObject({
+      text: "Llamar al fontanero",
+      important: true,
+    });
+    expect(await screen.findByText("⭐ Importante · sale en el inicio")).toBeTruthy();
+
+    await user.type(screen.getByLabelText("Nueva nota"), "Falta aceite");
+    await user.click(screen.getByRole("button", { name: "Añadir nota" }));
+    await vi.waitFor(() => expect(fake.tables.house_notes).toHaveLength(2));
+    expect(fake.tables.house_notes![1]).not.toHaveProperty("important");
+    const mark = await screen.findByRole("button", { name: "Marcar importante: Falta aceite" });
+    expect(mark.getAttribute("aria-pressed")).toBe("false");
+    await user.click(mark);
+    await vi.waitFor(() => expect(fake.tables.house_notes![1]!.important).toBe(true));
+    expect(
+      await screen.findByRole("button", { name: "Quitar importante: Falta aceite" }),
+    ).toBeTruthy();
+  });
+
+  it("sin el SQL de notas importantes, se pueden seguir añadiendo notas", async () => {
+    const fake = installFakeSupabase({
+      signedIn: true,
+      name: "Ana",
+      house: "Casa",
+      missingColumns: { house_notes: ["important"] },
+    });
+    const user = userEvent.setup();
+    renderAt("/notas");
+    await user.type(await screen.findByLabelText("Nueva nota"), "Falta aceite");
+    expect(screen.queryByRole("checkbox", { name: /Es importante/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Añadir nota" }));
+    await vi.waitFor(() => expect(fake.tables.house_notes).toHaveLength(1));
+    expect(await screen.findByRole("checkbox", { name: /Falta aceite/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /importante/ })).toBeNull();
   });
 });

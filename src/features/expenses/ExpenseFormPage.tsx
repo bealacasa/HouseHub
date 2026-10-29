@@ -257,7 +257,7 @@ function ExpenseForm({ expense, initialRepeat }: { expense?: Expense; initialRep
                     onChange={() => setSplit(mode)}
                     className="sr-only"
                   />
-                  {mode === "equal" ? "A partes iguales" : "Cantidades a mano"}
+                  {mode === "equal" ? "A partes iguales" : "Cada uno una cantidad"}
                 </label>
               ))}
             </div>

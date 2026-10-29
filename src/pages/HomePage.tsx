@@ -217,7 +217,8 @@ function Row({
 
 /**
  * Hoy: la lista para cerrar la casa si tu reserva acaba hoy, tus recordatorios de
- * hoy y los que se pasaron (solo los tuyos) y las notas pendientes de la casa.
+ * hoy y los que se pasaron (solo los tuyos) y las notas importantes (⭐) de la casa.
+ * Sin la migración de notas importantes, como antes: cuántas notas hay pendientes.
  */
 function Today() {
   const { me } = useHouse();
@@ -228,7 +229,9 @@ function Today() {
   const mine = (stays.data ?? []).filter((s) => s.memberId === me.id);
   const leaving = mine.some((s) => s.end === today);
   const dueNow = (reminders.data ?? []).filter((r) => !r.done && r.due !== null && r.due <= today);
-  const pending = (notes.data ?? []).filter((n) => !n.done);
+  const pending = (notes.data?.items ?? []).filter((n) => !n.done);
+  const canMarkImportant = notes.data?.canMarkImportant ?? false;
+  const important = pending.filter((n) => n.important);
   if (!stays.isFetched || !notes.isFetched) return null;
 
   const rows = [
@@ -251,7 +254,28 @@ function Today() {
         tone={r.due !== null && r.due < today ? "late" : "accent"}
       />
     )),
-    pending.length > 0 && (
+    ...(canMarkImportant
+      ? important
+          .slice(0, 3)
+          .map((n) => (
+            <Row
+              key={n.id}
+              to="/notas"
+              icon={<IconTile Icon={ListIcon} tint={TINTS.notes} />}
+              title={n.text}
+              detail="⭐ Nota importante"
+            />
+          ))
+      : []),
+    canMarkImportant && important.length > 3 && (
+      <Row
+        key="mas-notas"
+        to="/notas"
+        icon={<IconTile Icon={ListIcon} tint={TINTS.notes} />}
+        title={`Y ${important.length - 3} notas importantes más`}
+      />
+    ),
+    !canMarkImportant && pending.length > 0 && (
       <Row
         key="notas"
         to="/notas"
@@ -322,7 +346,7 @@ function Upcoming() {
   );
 }
 
-/** Tu saldo, solo si hay algo pendiente («Debes 20 €» / «Te deben 35 €»). */
+/** Tus cuentas, solo si hay algo pendiente («Debes 20 €» / «Te deben 35 €»). */
 function BalanceLink() {
   const { members, me } = useHouse();
   const ledger = useLedger();

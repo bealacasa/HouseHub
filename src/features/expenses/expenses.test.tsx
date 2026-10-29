@@ -78,7 +78,7 @@ describe("gastos", () => {
     });
     expect(fake.rpc).toHaveBeenCalledWith("run_recurring");
     await user.click(await screen.findByRole("tab", { name: "Gastos" }));
-    expect(await screen.findByRole("heading", { name: "Gastos fijos" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Recibos que se repiten" })).toBeTruthy();
     // Para dejar de repetirlo: se abre y en «¿Se repite?» se elige «No».
     await user.click(screen.getByRole("link", { name: /^Fibra, 35,00/ }));
     await user.click(await screen.findByLabelText(/^No$/));
@@ -94,7 +94,7 @@ describe("gastos", () => {
     renderAt("/gastos/nuevo");
     await user.type(await screen.findByLabelText("¿Cuánto ha costado?"), "20");
     await user.type(screen.getByLabelText("¿Qué es?"), "Compra");
-    await user.click(screen.getByLabelText("Cantidades a mano"));
+    await user.click(screen.getByLabelText("Cada uno una cantidad"));
     await user.type(screen.getByLabelText("Ana"), "15");
     expect(screen.getByText(/Faltan 5,00/)).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Apuntar gasto" }));
@@ -102,7 +102,7 @@ describe("gastos", () => {
     expect(fake.tables.expenses).toHaveLength(0);
   });
 
-  it("muestra cómo quedar en paz y apunta el pago", async () => {
+  it("muestra quién tiene que pagar a quién y apunta el pago", async () => {
     const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
     const me = String(fake.tables.house_members![0]!.id);
     fake.tables.house_members!.push({
@@ -131,11 +131,12 @@ describe("gastos", () => {
     renderAt("/gastos");
     expect(
       await screen.findByText(
-        (_, el) => el?.tagName === "P" && /Abuelo paga 20,00\s€ a Ana/.test(el.textContent ?? ""),
+        (_, el) =>
+          el?.tagName === "P" && /Abuelo tiene que dar 20,00\s€ a Ana/.test(el.textContent ?? ""),
       ),
     ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Marcar como pagado" }));
-    await user.click(await screen.findByRole("button", { name: "Sí, ya está pagado" }));
+    await user.click(screen.getByRole("button", { name: "✓ Ya está pagado" }));
+    await user.click(await screen.findByRole("button", { name: "Sí, ya se lo ha dado" }));
     await vi.waitFor(() =>
       expect(fake.tables.settlements![0]).toMatchObject({
         from_member: ABUELO,

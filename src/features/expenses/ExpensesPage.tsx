@@ -31,7 +31,7 @@ import {
 import { balances, formatEuros, settleUp, type Transfer } from "./money";
 
 const TABS = [
-  { id: "resumen", label: "Resumen" },
+  { id: "resumen", label: "Cuentas" },
   { id: "gastos", label: "Gastos" },
   { id: "pagos", label: "Pagos" },
 ] as const;
@@ -39,7 +39,7 @@ type Tab = (typeof TABS)[number]["id"];
 
 /**
  * Gastos compartidos. Arriba, tu saldo; debajo tres pestañas para no amontonar:
- * Resumen (cómo quedar en paz y saldos), Gastos (por meses) y Pagos (historial).
+ * Cuentas (quién tiene que pagar a quién), Gastos (por meses) y Pagos (historial).
  */
 export function ExpensesPage() {
   const { members, me } = useHouse();
@@ -121,7 +121,7 @@ export function ExpensesPage() {
   );
 }
 
-/** «Debes 20 €» / «Te deben 35 €» / «Estás en paz» (+ lo gastado este mes). */
+/** «Debes 20 €» / «Te deben 35 €» / «No debes nada» (+ lo gastado este mes). */
 export function MyBalance({ cents, spentThisMonth }: { cents: number; spentThisMonth?: number }) {
   const owe = cents < 0;
   const even = cents === 0;
@@ -135,17 +135,17 @@ export function MyBalance({ cents, spentThisMonth }: { cents: number; spentThisM
             : "border-emerald-600/50 bg-emerald-50! dark:bg-emerald-950/40!"
       }
     >
-      <p className="text-lg font-semibold text-muted">Tu saldo</p>
+      <p className="text-lg font-semibold text-muted">Tus cuentas</p>
       <p className="mt-1 text-3xl font-extrabold tracking-tight">
         {even
-          ? "Estás en paz ✓"
+          ? "No debes nada ✓"
           : owe
             ? `Debes ${formatEuros(-cents)}`
             : `Te deben ${formatEuros(cents)}`}
       </p>
       {spentThisMonth !== undefined && (
         <p className="mt-2 text-lg text-muted">
-          Gastado en la casa este mes:{" "}
+          Este mes la casa ha gastado{" "}
           <strong className="text-text">{formatEuros(spentThisMonth)}</strong>
         </p>
       )}
@@ -165,8 +165,8 @@ function SettleCard({ transfers, members }: { transfers: Transfer[]; members: re
   async function markPaid(t: Transfer) {
     const ok = await confirm({
       title: "¿Ya está pagado?",
-      message: `${name(t.from)} ha pagado ${formatEuros(t.cents)} a ${name(t.to)}.`,
-      confirmLabel: "Sí, ya está pagado",
+      message: `¿${name(t.from)} ya le ha dado ${formatEuros(t.cents)} a ${name(t.to)}?`,
+      confirmLabel: "Sí, ya se lo ha dado",
     });
     if (ok) settle.mutate(t);
   }
@@ -175,18 +175,18 @@ function SettleCard({ transfers, members }: { transfers: Transfer[]; members: re
     <Card>
       {transfers.length === 0 ? (
         <div className="text-center">
-          <p className="text-2xl font-bold">Todos estáis en paz ✓</p>
-          <p className="mt-1 text-lg text-muted">Nadie debe nada a nadie.</p>
+          <p className="text-2xl font-bold">Las cuentas están al día ✓</p>
+          <p className="mt-1 text-lg text-muted">Nadie le debe nada a nadie.</p>
         </div>
       ) : (
         <>
-          <h2 className="text-2xl font-bold">Cómo quedar en paz</h2>
+          <h2 className="text-2xl font-bold">Quién tiene que pagar a quién</h2>
           <ul className="mt-2 divide-y divide-border">
             {transfers.map((t) => (
               <li key={`${t.from}-${t.to}`} className="py-3">
                 <p className="text-xl">
-                  <strong>{name(t.from)}</strong> paga <strong>{formatEuros(t.cents)}</strong> a{" "}
-                  <strong>{name(t.to)}</strong>
+                  <strong>{name(t.from)}</strong> tiene que dar{" "}
+                  <strong>{formatEuros(t.cents)}</strong> a <strong>{name(t.to)}</strong>
                 </p>
                 <button
                   type="button"
@@ -194,7 +194,7 @@ function SettleCard({ transfers, members }: { transfers: Transfer[]; members: re
                   onClick={() => void markPaid(t)}
                   className={`${buttonSecondary} mt-2`}
                 >
-                  Marcar como pagado
+                  ✓ Ya está pagado
                 </button>
               </li>
             ))}
@@ -228,7 +228,7 @@ function BalancesCard({
 }) {
   return (
     <Card>
-      <h2 className="text-2xl font-bold">Saldo de cada uno</h2>
+      <h2 className="text-2xl font-bold">Cómo va cada uno</h2>
       <ul className="mt-2 divide-y divide-border">
         {members.map((m) => {
           const c = balance.get(m.id) ?? 0;
@@ -246,10 +246,10 @@ function BalancesCard({
                 }`}
               >
                 {c === 0
-                  ? "En paz"
+                  ? "Al día"
                   : c > 0
-                    ? `Le deben ${formatEuros(c)}`
-                    : `Debe ${formatEuros(-c)}`}
+                    ? `Tiene que recibir ${formatEuros(c)}`
+                    : `Tiene que pagar ${formatEuros(-c)}`}
               </span>
             </li>
           );
@@ -259,7 +259,7 @@ function BalancesCard({
   );
 }
 
-/** Gastos fijos (internet cada mes…). Se tocan para cambiarlos o dejar de repetirlos. */
+/** Recibos que se repiten (internet cada mes…). Se tocan para cambiarlos o dejar de repetirlos. */
 function RecurringCard({
   recurring,
   expenses,
@@ -285,7 +285,7 @@ function RecurringCard({
   return (
     <section aria-labelledby="fijos">
       <h2 id="fijos" className="mb-2 text-xl font-bold">
-        Gastos fijos
+        Recibos que se repiten
       </h2>
       <Card className="overflow-hidden p-0!">
         <ul className="divide-y divide-border">
@@ -416,7 +416,7 @@ function ExpenseRow({ expense, members }: { expense: Expense; members: readonly 
       <CategoryTile category={expense.category} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-lg font-bold">
-          {expense.recurringId && <span aria-label="Gasto fijo">🔁 </span>}
+          {expense.recurringId && <span aria-label="Se repite">🔁 </span>}
           {expense.concept}
         </span>
         <span className="block truncate text-base text-muted">
@@ -429,7 +429,7 @@ function ExpenseRow({ expense, members }: { expense: Expense; members: readonly 
   );
 }
 
-/** Historial de pagos para quedar en paz («Carmen pagó 20 € a Ana»). */
+/** Historial de pagos entre la familia («Carmen pagó 20 € a Ana»). */
 function PaymentHistory({
   settlements,
   members,
@@ -442,8 +442,7 @@ function PaymentHistory({
   if (settlements.length === 0) {
     return (
       <Empty>
-        Aún no hay pagos. Cuando alguien pulse «Marcar como pagado» en el Resumen, quedará apuntado
-        aquí.
+        Aún no hay pagos. Cuando alguien pulse «Ya está pagado» en Cuentas, quedará apuntado aquí.
       </Empty>
     );
   }

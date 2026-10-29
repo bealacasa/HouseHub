@@ -12,7 +12,14 @@ import {
 import { PrivacyHint } from "@/components/form";
 import { useHouse } from "@/features/house/HouseGate";
 import { errorMessage } from "@/features/house/house";
-import { useAddNote, useDeleteNotes, useNotes, useToggleNote, type Note } from "./notes";
+import {
+  useAddNote,
+  useDeleteNotes,
+  useNotes,
+  useSetImportant,
+  useToggleNote,
+  type Note,
+} from "./notes";
 
 /** Notas de la casa: una lista compartida para tachar («falta aceite», «acordarse de…»). */
 export function NotesPage() {
@@ -21,8 +28,10 @@ export function NotesPage() {
   const add = useAddNote(house.id);
   const remove = useDeleteNotes();
   const [text, setText] = useState("");
+  const [important, setImportant] = useState(false);
   const [dialog, confirm] = useConfirm();
-  const all = notes.data ?? [];
+  const all = notes.data?.items ?? [];
+  const canMarkImportant = notes.data?.canMarkImportant ?? false;
   const pending = all.filter((n) => !n.done);
   const done = all.filter((n) => n.done);
 
@@ -48,7 +57,15 @@ export function NotesPage() {
           className="space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
-            add.mutate(text, { onSuccess: () => setText("") });
+            add.mutate(
+              { text, important: canMarkImportant && important },
+              {
+                onSuccess: () => {
+                  setText("");
+                  setImportant(false);
+                },
+              },
+            );
           }}
         >
           <label htmlFor="new-note" className="block text-xl font-semibold">
@@ -64,6 +81,20 @@ export function NotesPage() {
             className={inputClass}
           />
           <PrivacyHint id="note-hint" />
+          {canMarkImportant && (
+            <label className="flex min-h-12 cursor-pointer items-center gap-3 text-lg font-semibold">
+              <input
+                type="checkbox"
+                checked={important}
+                onChange={(e) => setImportant(e.target.checked)}
+                className="size-7 shrink-0 accent-[var(--accent)]"
+              />
+              <span>
+                <span aria-hidden="true">⭐ </span>Es importante{" "}
+                <span className="font-normal text-muted">(sale en el inicio)</span>
+              </span>
+            </label>
+          )}
           {add.isError && <ErrorMessage>{errorMessage(add.error)}</ErrorMessage>}
           <button type="submit" disabled={add.isPending} className={buttonPrimary}>
             Añadir nota
@@ -77,10 +108,12 @@ export function NotesPage() {
           No hay notas. ¡Todo en orden!
         </p>
       )}
-      {pending.length > 0 && <NoteList notes={pending} title="Pendientes" />}
+      {pending.length > 0 && (
+        <NoteList notes={pending} title="Pendientes" canMarkImportant={canMarkImportant} />
+      )}
       {done.length > 0 && (
         <section className="mt-6">
-          <NoteList notes={done} title="Hechas" />
+          <NoteList notes={done} title="Hechas" canMarkImportant={false} />
           <button
             type="button"
             onClick={() => void clearDone()}
@@ -95,7 +128,15 @@ export function NotesPage() {
   );
 }
 
-function NoteList({ notes, title }: { notes: Note[]; title: string }) {
+function NoteList({
+  notes,
+  title,
+  canMarkImportant,
+}: {
+  notes: Note[];
+  title: string;
+  canMarkImportant: boolean;
+}) {
   return (
     <section aria-label={title}>
       <h2 className="mb-3 text-xl font-bold">
@@ -104,7 +145,7 @@ function NoteList({ notes, title }: { notes: Note[]; title: string }) {
       <ul className="space-y-2">
         {notes.map((n) => (
           <li key={n.id}>
-            <NoteRow note={n} />
+            <NoteRow note={n} canMarkImportant={canMarkImportant} />
           </li>
         ))}
       </ul>
@@ -112,29 +153,54 @@ function NoteList({ notes, title }: { notes: Note[]; title: string }) {
   );
 }
 
-function NoteRow({ note }: { note: Note }) {
+function NoteRow({ note, canMarkImportant }: { note: Note; canMarkImportant: boolean }) {
   const { members } = useHouse();
   const toggle = useToggleNote();
+  const star = useSetImportant();
   const author = members.find((m) => m.userId === note.createdBy)?.displayName;
+  const highlighted = note.important && !note.done;
   return (
-    <label
-      className={`flex min-h-16 cursor-pointer items-center gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm has-focus-visible:ring-3 has-focus-visible:ring-focus ${
-        note.done ? "opacity-70" : ""
-      }`}
+    <div
+      className={`flex min-h-16 items-center gap-2 rounded-2xl border bg-surface p-2 pl-4 shadow-sm ${
+        highlighted ? "border-amber-500 bg-amber-50! dark:bg-amber-950/40!" : "border-border"
+      } ${note.done ? "opacity-70" : ""}`}
     >
-      <input
-        type="checkbox"
-        checked={note.done}
-        disabled={toggle.isPending}
-        onChange={(e) => toggle.mutate({ id: note.id, done: e.target.checked })}
-        className="size-8 shrink-0 accent-[var(--accent)]"
-      />
-      <span className="min-w-0 flex-1">
-        <span className={`block text-xl ${note.done ? "line-through" : "font-semibold"}`}>
-          {note.text}
+      <label className="flex min-h-12 flex-1 cursor-pointer items-center gap-4 rounded-xl has-focus-visible:ring-3 has-focus-visible:ring-focus">
+        <input
+          type="checkbox"
+          checked={note.done}
+          disabled={toggle.isPending}
+          onChange={(e) => toggle.mutate({ id: note.id, done: e.target.checked })}
+          className="size-8 shrink-0 accent-[var(--accent)]"
+        />
+        <span className="min-w-0 flex-1">
+          <span className={`block text-xl ${note.done ? "line-through" : "font-semibold"}`}>
+            {note.text}
+          </span>
+          {highlighted && (
+            <span className="block text-base font-semibold text-amber-900 dark:text-amber-200">
+              ⭐ Importante · sale en el inicio
+            </span>
+          )}
+          {author && <span className="block text-base text-muted">Lo apuntó {author}</span>}
         </span>
-        {author && <span className="block text-base text-muted">Lo apuntó {author}</span>}
-      </span>
-    </label>
+      </label>
+      {canMarkImportant && (
+        <button
+          type="button"
+          aria-pressed={note.important}
+          aria-label={
+            note.important ? `Quitar importante: ${note.text}` : `Marcar importante: ${note.text}`
+          }
+          disabled={star.isPending}
+          onClick={() => star.mutate({ id: note.id, important: !note.important })}
+          className={`grid min-h-12 min-w-12 shrink-0 place-items-center rounded-xl border-2 text-2xl ${
+            note.important ? "border-amber-500 bg-amber-100 dark:bg-amber-900" : "border-border"
+          }`}
+        >
+          <span aria-hidden="true">{note.important ? "⭐" : "☆"}</span>
+        </button>
+      )}
+    </div>
   );
 }

@@ -22,7 +22,7 @@ function renderAt(path: string) {
 const day = (n: number) => toKey(addDays(new Date(), n));
 
 describe("inicio", () => {
-  it("«Hoy» junta la lista para irse, tus recordatorios y las notas pendientes", async () => {
+  it("«Hoy» junta la lista para irse, tus recordatorios y las notas importantes", async () => {
     const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
     const house = fake.tables.houses![0]!.id;
     const me = String(fake.tables.house_members![0]!.id);
@@ -55,14 +55,26 @@ describe("inicio", () => {
         created_at: "2026-10-29T10:00:00Z",
       },
     );
-    fake.tables.house_notes!.push({
-      id: "77777777-7777-4777-8777-777777777771",
-      house_id: house,
-      text: "Falta aceite",
-      done_at: null,
-      created_by: null,
-      created_at: "2026-10-28T10:00:00Z",
-    });
+    fake.tables.house_notes!.push(
+      {
+        id: "77777777-7777-4777-8777-777777777771",
+        house_id: house,
+        text: "Falta aceite",
+        important: true,
+        done_at: null,
+        created_by: null,
+        created_at: "2026-10-28T10:00:00Z",
+      },
+      {
+        id: "77777777-7777-4777-8777-777777777772",
+        house_id: house,
+        text: "Comprar servilletas",
+        important: false,
+        done_at: null,
+        created_by: null,
+        created_at: "2026-10-28T10:00:00Z",
+      },
+    );
     renderAt("/");
     const hoy = (await screen.findByRole("heading", { name: "Hoy" })).closest("section")!;
     expect(
@@ -71,7 +83,9 @@ describe("inicio", () => {
     expect(await within(hoy).findByText("Pagar el gimnasio")).toBeTruthy();
     expect(within(hoy).getByText("Era para ayer")).toBeTruthy();
     expect(within(hoy).queryByText("Para la semana que viene")).toBeNull();
-    expect(within(hoy).getByText("1 nota pendiente")).toBeTruthy();
+    expect(within(hoy).getByText("Falta aceite")).toBeTruthy();
+    expect(within(hoy).getByText("⭐ Nota importante")).toBeTruthy();
+    expect(within(hoy).queryByText("Comprar servilletas")).toBeNull();
     expect(screen.getByText(/En la casa: Ana \(se va hoy\)/)).toBeTruthy();
     expect(screen.queryByText(/Lista para abrir la casa/)).toBeNull();
   });
@@ -128,5 +142,24 @@ describe("inicio", () => {
     installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
     renderAt("/casa");
     expect(await screen.findByRole("link", { name: /Pon una foto de la casa/ })).toBeTruthy();
+  });
+
+  it("sin el SQL de notas importantes, el inicio cuenta las pendientes como antes", async () => {
+    const fake = installFakeSupabase({
+      signedIn: true,
+      name: "Ana",
+      house: "Casa",
+      missingColumns: { house_notes: ["important"] },
+    });
+    fake.tables.house_notes!.push({
+      id: "77777777-7777-4777-8777-777777777771",
+      house_id: fake.tables.houses![0]!.id,
+      text: "Falta aceite",
+      done_at: null,
+      created_by: null,
+      created_at: "2026-10-28T10:00:00Z",
+    });
+    renderAt("/");
+    expect(await screen.findByText("1 nota pendiente")).toBeTruthy();
   });
 });
