@@ -1,4 +1,4 @@
-import { BookIcon, HomeIcon, ListIcon } from "@/components/icons";
+import { BellIcon, BookIcon, HomeIcon, ListIcon } from "@/components/icons";
 import { HubGrid } from "@/components/HubGrid";
 import { Card, PageTitle } from "@/components/ui";
 import { useHouse } from "@/features/house/HouseGate";
@@ -17,6 +17,13 @@ const ITEMS = [
     label: "Notas",
     hint: "Lo que falta",
     tint: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
+  },
+  {
+    to: "/recordatorios",
+    Icon: BellIcon,
+    label: "Mis recordatorios",
+    hint: "🔒 Solo los ves tú",
+    tint: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200",
   },
   {
     to: "/casa/datos",

@@ -71,6 +71,7 @@ export function installFakeSupabase(
     settlements: [],
     recurring_expenses: [],
     excursions: [],
+    personal_reminders: [],
   };
   const uid = () => crypto.randomUUID();
   const ok = (data: unknown) => ({ data, error: null });

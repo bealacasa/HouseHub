@@ -93,3 +93,9 @@ export const KeyIcon = (p: IconProps) => (
     <path d="m11.2 11.8 8.3-8.3M16.5 6.5l2.5 2.5M14 9l2 2" />
   </Svg>
 );
+
+export const BellIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2ZM10 21h4" />
+  </Svg>
+);

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { processImage } from "@/lib/image";
+import { isMissingInDatabase } from "@/lib/dbErrors";
 import { getSupabase } from "@/lib/supabase";
 import { expectChanged } from "@/lib/write";
 import type { DateKey } from "@/features/calendar/stays";
@@ -111,12 +112,6 @@ export class ExcursionsNotReadyError extends Error {
   constructor() {
     super("Las excursiones aún no están activadas.");
   }
-}
-
-/** PostgREST: tabla (PGRST205) o función (PGRST202) que no existe; Postgres: 42P01. */
-export function isMissingInDatabase(error: unknown): boolean {
-  const code = (error as { code?: unknown } | null)?.code;
-  return code === "PGRST205" || code === "PGRST202" || code === "42P01";
 }
 
 const notReadyOr = (error: unknown) =>

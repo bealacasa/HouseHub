@@ -13,7 +13,12 @@ const TABS = [
   { to: "/", label: "Inicio", Icon: HomeIcon, paths: [] },
   { to: "/calendario", label: "Calendario", Icon: CalendarIcon, paths: ["/calendario"] },
   { to: "/gastos", label: "Gastos", Icon: EuroIcon, paths: ["/gastos"] },
-  { to: "/casa", label: "Casa", Icon: KeyIcon, paths: ["/casa", "/instrucciones", "/notas"] },
+  {
+    to: "/casa",
+    label: "Casa",
+    Icon: KeyIcon,
+    paths: ["/casa", "/instrucciones", "/notas", "/recordatorios"],
+  },
   { to: "/pueblo", label: "Pueblo", Icon: MapIcon, paths: ["/pueblo", "/eventos", "/excursiones"] },
 ] as const;
 
