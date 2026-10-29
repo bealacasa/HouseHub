@@ -59,9 +59,8 @@ describe("calendario", () => {
       created_by: null,
     });
     renderAt("/");
-    const box = await screen.findByRole("heading", { name: "¿Quién está en la casa?" });
-    expect(box.parentElement!.textContent).toContain("Ana");
-    expect(box.parentElement!.textContent).not.toContain("no hay nadie");
+    expect(await screen.findByText(/En la casa: Ana/)).toBeTruthy();
+    expect(screen.queryByText(/no hay nadie/)).toBeNull();
   });
 
   it("al tocar un nombre de la leyenda se ven solo las reservas de esa persona", async () => {

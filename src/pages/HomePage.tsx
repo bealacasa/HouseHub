@@ -2,23 +2,24 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router";
 import { Avatar } from "@/components/Avatar";
-import { BookIcon, CalendarIcon, EuroIcon, ListIcon, UsersIcon } from "@/components/icons";
+import { BellIcon, CalendarIcon, EuroIcon, ListIcon, UsersIcon } from "@/components/icons";
 import { Card, buttonSecondary, cardShadow } from "@/components/ui";
 import { useMe } from "@/features/auth/RequireAuth";
-import { StayCard } from "@/features/calendar/CalendarPage";
-import { staysOn, toKey, useStays } from "@/features/calendar/stays";
-import { ExcursionCard } from "@/features/excursions/ExcursionsPage";
-import { useExcursions } from "@/features/excursions/excursions";
-import { useHouse } from "@/features/house/HouseGate";
-import { useHousePhotoUrl } from "@/features/house/photo";
-import { useNotes } from "@/features/notes/notes";
+import { shortDate, staysOn, toKey, useStays } from "@/features/calendar/stays";
 import { MyBalance } from "@/features/expenses/ExpensesPage";
 import { useLedger } from "@/features/expenses/expenses";
 import { balances } from "@/features/expenses/money";
+import { useHouse } from "@/features/house/HouseGate";
+import { useHousePhotoUrl } from "@/features/house/photo";
+import { useNotes } from "@/features/notes/notes";
+import { dueLabel, useReminders } from "@/features/reminders/reminders";
 import { currentSeason } from "@/lib/season";
 import { InstallCard } from "@/pwa/InstallCard";
 
-/** Inicio. En las próximas fases: «Llego / Me voy», avisos y saldo. */
+/**
+ * Inicio: «¿qué pasa hoy y qué tengo que hacer?». Un solo estilo (título y tarjeta con
+ * filas que se tocan) y solo lo que tiene contenido: los bloques vacíos no se enseñan.
+ */
 export function HomePage() {
   const { profile } = useMe();
   const { house, members, isAdmin } = useHouse();
@@ -53,6 +54,7 @@ export function HomePage() {
               <span aria-hidden="true">🎃 </span>¡Feliz Halloween!
             </p>
           )}
+          <InTheHouse />
         </div>
         {/* Adorno de temporada (solo decoración). */}
         {halloween && (
@@ -62,7 +64,7 @@ export function HomePage() {
         )}
       </header>
       <QuickActions />
-      <div className="mt-6 space-y-5">
+      <div className="mt-6 space-y-6">
         {isAdmin && onlyMe && (
           <Card className="border-accent/40 bg-accent-soft!">
             <div className="flex items-start gap-4">
@@ -84,150 +86,232 @@ export function HomePage() {
             </Link>
           </Card>
         )}
-        <WhoIsGoing />
-        <PendingNotes />
-        <ExcursionIdeas />
+        <Today />
+        <Upcoming />
         <BalanceLink />
-        {house.notes && (
-          <Card>
-            <h2 className="text-2xl font-bold">ℹ️ Información de la casa</h2>
-            <p className="mt-2 whitespace-pre-line text-lg">{house.notes}</p>
-          </Card>
-        )}
         <InstallCard />
       </div>
     </>
   );
 }
 
-/** Quién está ahora en la casa y quién va a ir (las 2 próximas reservas). */
-function WhoIsGoing() {
+/** «🏠 En la casa: Ana (hasta el sábado)» dentro del saludo. */
+function InTheHouse() {
   const { members } = useHouse();
   const stays = useStays();
+  if (!stays.isSuccess) return null;
   const today = toKey(new Date());
-  const all = stays.data ?? [];
-  const now = staysOn(all, today);
-  const next = all.filter((s) => s.start > today).slice(0, 2);
-  if (stays.isPending) return null;
-  const present = members.filter((m) => now.some((s) => s.memberId === m.id));
-
+  const now = staysOn(stays.data, today);
+  const names = members
+    .filter((m) => now.some((s) => s.memberId === m.id))
+    .map((m) => m.displayName);
+  const lastEnd = now
+    .map((s) => s.end)
+    .sort()
+    .at(-1);
   return (
-    <section aria-labelledby="quien-va" className="space-y-3">
-      <Card>
-        <h2 id="quien-va" className="text-2xl font-bold">
-          ¿Quién está en la casa?
-        </h2>
-        {present.length > 0 ? (
-          <ul className="mt-3 flex flex-wrap gap-3">
-            {present.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center gap-2 rounded-full bg-surface-2 py-1 pl-1 pr-4"
-              >
-                <Avatar member={m} members={members} size="sm" />
-                <span className="text-lg font-bold">{m.displayName}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-2 text-lg text-muted">Ahora mismo no hay nadie.</p>
-        )}
+    <p className="mt-3 text-lg font-semibold">
+      <span aria-hidden="true">🏠 </span>
+      {names.length === 0
+        ? "Ahora no hay nadie en la casa"
+        : `En la casa: ${listNames(names)}${
+            lastEnd && lastEnd !== today
+              ? ` (hasta el ${format(new Date(`${lastEnd}T12:00:00`), "EEEE d", { locale: es })})`
+              : " (se va hoy)"
+          }`}
+    </p>
+  );
+}
+
+const listNames = (names: string[]) =>
+  names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} y ${names.at(-1)}`;
+
+/** Bloque con título fuera y filas dentro (mismo estilo en todo el Inicio). */
+function Section({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section aria-labelledby={id}>
+      <h2 id={id} className="mb-2 px-1 text-2xl font-bold">
+        {title}
+      </h2>
+      <Card className="px-0! py-1!">
+        <ul className="divide-y divide-border">{children}</ul>
       </Card>
-      {next.length > 0 && (
-        <>
-          <h3 className="px-1 pt-2 text-xl font-bold">Próximamente</h3>
-          <ul className="space-y-3">
-            {next.map((s) => (
-              <li key={s.id}>
-                <StayCard stay={s} members={members} />
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      <Link to="/calendario" className={buttonSecondary}>
-        Ver el calendario
-      </Link>
     </section>
   );
 }
 
-/** Notas pendientes («falta aceite»…), las 3 últimas. */
-function PendingNotes() {
-  const notes = useNotes();
-  const pending = (notes.data ?? []).filter((n) => !n.done);
-  if (!notes.isSuccess) return null;
+type Tone = "normal" | "late" | "accent";
+
+/** Fila que se toca: icono, texto y una línea de detalle opcional. */
+function Row({
+  to,
+  icon,
+  title,
+  detail,
+  tone = "normal",
+}: {
+  to: string;
+  icon: React.ReactNode;
+  title: string;
+  detail?: string;
+  tone?: Tone;
+}) {
   return (
-    <Card>
-      <h2 className="text-2xl font-bold">
-        Notas de la casa{" "}
-        {pending.length > 0 && <span className="text-muted">({pending.length})</span>}
-      </h2>
-      {pending.length === 0 ? (
-        <p className="mt-2 text-lg text-muted">No hay nada pendiente.</p>
-      ) : (
-        <ul className="mt-3 space-y-2 text-lg">
-          {pending.slice(0, 3).map((n) => (
-            <li key={n.id} className="flex gap-2">
-              <span aria-hidden="true" className="text-accent">
-                •
-              </span>
-              {n.text}
-            </li>
-          ))}
-        </ul>
-      )}
-      <Link to="/notas" className={`${buttonSecondary} mt-4`}>
-        {pending.length > 0 ? "Ver y tachar" : "Añadir una nota"}
+    <li>
+      <Link to={to} className="flex min-h-16 items-center gap-3 px-4 py-3 active:bg-surface-2">
+        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center text-2xl">
+          {icon}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-lg font-bold leading-snug">{title}</span>
+          {detail && (
+            <span
+              className={`block text-base first-letter:uppercase ${
+                tone === "late"
+                  ? "font-semibold text-danger"
+                  : tone === "accent"
+                    ? "font-semibold text-accent"
+                    : "text-muted"
+              }`}
+            >
+              {detail}
+            </span>
+          )}
+        </span>
+        <span aria-hidden="true" className="text-2xl text-muted">
+          ›
+        </span>
       </Link>
-    </Card>
+    </li>
   );
 }
 
 /**
- * Excursiones: hasta 3 ideas, primero las que aún no hemos hecho y luego las de hace más
- * tiempo. Si la sección aún no está activada en Supabase (o falla), no se enseña.
+ * Hoy: las listas de llegar o irse si tu reserva empieza o acaba hoy, tus recordatorios de
+ * hoy y los que se pasaron (solo los tuyos) y las notas pendientes de la casa.
  */
-function ExcursionIdeas() {
-  const excursions = useExcursions();
-  if (!excursions.isSuccess) return null;
+function Today() {
+  const { me } = useHouse();
+  const stays = useStays();
+  const reminders = useReminders();
+  const notes = useNotes();
   const today = toKey(new Date());
-  const ideas = [...excursions.data.items]
-    .sort((a, b) => (a.lastVisited ?? "").localeCompare(b.lastVisited ?? ""))
-    .slice(0, 3);
+  const mine = (stays.data ?? []).filter((s) => s.memberId === me.id);
+  const arriving = mine.some((s) => s.start === today);
+  const leaving = mine.some((s) => s.end === today);
+  const dueNow = (reminders.data ?? []).filter((r) => !r.done && r.due !== null && r.due <= today);
+  const pending = (notes.data ?? []).filter((n) => !n.done);
+  if (!stays.isFetched || !notes.isFetched) return null;
+
+  const rows = [
+    arriving && (
+      <Row
+        key="llegar"
+        to="/llegar"
+        icon="🔑"
+        title="¿Has llegado? Lista para abrir la casa"
+        tone="accent"
+      />
+    ),
+    leaving && (
+      <Row
+        key="irse"
+        to="/irse"
+        icon="🧳"
+        title="¿Te vas hoy? Lista para cerrar la casa"
+        tone="accent"
+      />
+    ),
+    ...dueNow.map((r) => (
+      <Row
+        key={r.id}
+        to="/recordatorios"
+        icon={<BellIcon className="size-6 text-accent" />}
+        title={r.text}
+        detail={dueLabel(r.due, today) ?? undefined}
+        tone={r.due !== null && r.due < today ? "late" : "accent"}
+      />
+    )),
+    pending.length > 0 && (
+      <Row
+        key="notas"
+        to="/notas"
+        icon="📝"
+        title={pending.length === 1 ? "1 nota pendiente" : `${pending.length} notas pendientes`}
+        detail={pending
+          .slice(0, 2)
+          .map((n) => n.text)
+          .join(" · ")}
+      />
+    ),
+  ].filter(Boolean);
+
   return (
-    <section aria-labelledby="excursiones-inicio" className="space-y-3">
-      <h2 id="excursiones-inicio" className="px-1 text-2xl font-bold">
-        ¿De excursión?
+    <section aria-labelledby="hoy">
+      <h2 id="hoy" className="mb-2 px-1 text-2xl font-bold">
+        Hoy
       </h2>
-      {ideas.length === 0 ? (
-        <p className="rounded-3xl border-2 border-dashed border-border p-5 text-center text-lg text-muted">
-          Aún no hay excursiones. Apunta los sitios bonitos de cerca.
-        </p>
+      {rows.length === 0 ? (
+        <Card>
+          <p className="text-lg text-muted">
+            <span aria-hidden="true">✓ </span>Nada pendiente para hoy.
+          </p>
+        </Card>
       ) : (
-        <ul className="space-y-3">
-          {ideas.map((x) => (
-            <li key={x.id}>
-              <ExcursionCard excursion={x} today={today} />
-            </li>
-          ))}
-        </ul>
+        <Card className="px-0! py-1!">
+          <ul className="divide-y divide-border">{rows}</ul>
+        </Card>
       )}
-      <Link
-        to={ideas.length === 0 ? "/excursiones/nueva" : "/excursiones"}
-        className={buttonSecondary}
-      >
-        {ideas.length === 0
-          ? "Añadir una excursión"
-          : excursions.data.items.length > ideas.length
-            ? `Ver las ${excursions.data.items.length} excursiones`
-            : "Ver las excursiones"}
-      </Link>
     </section>
   );
 }
 
-/** Tu saldo de gastos («Debes 20 €» / «Te deben 35 €»), con enlace a Gastos. */
+/** Próximamente: las 3 próximas reservas y el enlace al calendario. */
+function Upcoming() {
+  const { members } = useHouse();
+  const stays = useStays();
+  if (!stays.isSuccess) return null;
+  const today = toKey(new Date());
+  const next = stays.data.filter((s) => s.start > today).slice(0, 3);
+  return (
+    <Section id="proximamente" title="Próximamente">
+      {next.map((s) => {
+        const member = members.find((m) => m.id === s.memberId);
+        return (
+          <Row
+            key={s.id}
+            to={`/calendario/${s.id}`}
+            icon={
+              member ? (
+                <Avatar member={member} members={members} size="sm" />
+              ) : (
+                <CalendarIcon className="size-6" />
+              )
+            }
+            title={member?.displayName ?? "Alguien"}
+            detail={`${s.start === s.end ? shortDate(s.start) : `${shortDate(s.start)} – ${shortDate(s.end)}`} · ${s.people} ${s.people === 1 ? "persona" : "personas"}`}
+          />
+        );
+      })}
+      <Row
+        to="/calendario"
+        icon={<CalendarIcon className="size-6 text-accent" />}
+        title={next.length === 0 ? "No hay reservas próximas" : "Ver el calendario"}
+        detail={next.length === 0 ? "Toca para reservar o ver el calendario" : undefined}
+      />
+    </Section>
+  );
+}
+
+/** Tu saldo, solo si hay algo pendiente («Debes 20 €» / «Te deben 35 €»). */
 function BalanceLink() {
   const { members, me } = useHouse();
   const ledger = useLedger();
@@ -238,6 +322,7 @@ function BalanceLink() {
       ledger.data.expenses,
       ledger.data.settlements,
     ).get(me.id) ?? 0;
+  if (mine === 0) return null;
   return (
     <Link to="/gastos" className="block rounded-3xl active:scale-[0.99]">
       <MyBalance cents={mine} />
@@ -245,7 +330,7 @@ function BalanceLink() {
   );
 }
 
-/** Accesos rápidos a lo que más se hace (1 toque). */
+/** Lo que más se hace, en una fila (1 toque). El resto está en las pestañas. */
 const ACTIONS = [
   {
     to: "/calendario/nueva",
@@ -265,31 +350,25 @@ const ACTIONS = [
     Icon: ListIcon,
     tint: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
   },
-  {
-    to: "/instrucciones",
-    label: "Instrucciones",
-    Icon: BookIcon,
-    tint: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200",
-  },
 ] as const;
 
 function QuickActions() {
   return (
     <nav aria-label="Accesos rápidos">
-      <ul className="grid grid-cols-2 gap-3">
+      <ul className="grid grid-cols-3 gap-2">
         {ACTIONS.map(({ to, label, Icon, tint }) => (
           <li key={to}>
             <Link
               to={to}
-              className={`flex min-h-28 flex-col justify-between gap-2 rounded-3xl border border-border/70 bg-surface p-4 active:scale-[0.98] ${cardShadow}`}
+              className={`flex h-full min-h-24 flex-col items-center justify-center gap-1.5 rounded-3xl border border-border/70 bg-surface p-2 text-center active:scale-[0.98] ${cardShadow}`}
             >
               <span
                 aria-hidden="true"
-                className={`grid size-12 shrink-0 place-items-center rounded-2xl ${tint}`}
+                className={`grid size-11 shrink-0 place-items-center rounded-2xl ${tint}`}
               >
-                <Icon />
+                <Icon className="size-6" />
               </span>
-              <span className="text-lg font-bold leading-tight break-words">{label}</span>
+              <span className="text-base font-bold leading-tight">{label}</span>
             </Link>
           </li>
         ))}

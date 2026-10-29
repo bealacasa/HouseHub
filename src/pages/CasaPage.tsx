@@ -41,10 +41,13 @@ export function CasaPage() {
     <>
       <PageTitle title="La casa" subtitle="Cómo funciona y qué falta." />
       <HubGrid items={ITEMS} label="La casa" />
-      {house.address && (
-        <Card className="mt-5">
-          <h2 className="text-xl font-bold">Dirección</h2>
-          <p className="mt-1 text-lg">{house.address}</p>
+      {(house.address || house.notes) && (
+        <Card className="mt-5 space-y-3">
+          <h2 className="text-2xl font-bold">
+            <span aria-hidden="true">ℹ️ </span>Información de la casa
+          </h2>
+          {house.address && <p className="text-lg font-semibold">{house.address}</p>}
+          {house.notes && <p className="whitespace-pre-line text-lg">{house.notes}</p>}
         </Card>
       )}
     </>
