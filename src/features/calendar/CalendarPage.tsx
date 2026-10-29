@@ -10,6 +10,7 @@ import {
   buttonPrimary,
   buttonSecondary,
   cardShadow,
+  textButton,
 } from "@/components/ui";
 import { eventsOn, useEvents, type VillageEvent } from "@/features/events/events";
 import { useHouse } from "@/features/house/HouseGate";
@@ -293,11 +294,11 @@ function DayCell({
         }`}
       >
         {date.getDate()}
-        {/* Evento del pueblo: estrella rosada pegada al número (distinta de las reservas). */}
+        {/* Evento del pueblo: estrella verde pegada al número (distinta de las reservas). */}
         {events.length > 0 && (
           <span
             aria-hidden="true"
-            className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-rose-700 text-[0.6rem] leading-none text-white"
+            className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-emerald-700 text-[0.6rem] leading-none text-white"
           >
             ★
           </span>
@@ -411,7 +412,7 @@ function PersonStays({
               type="button"
               onClick={() => setShowPast((v) => !v)}
               aria-expanded={showPast}
-              className="mt-2 min-h-12 text-lg font-semibold text-accent underline"
+              className={`${textButton} mt-2`}
             >
               {showPast ? "Ocultar las pasadas" : `Ver las pasadas (${past.length})`}
             </button>
@@ -461,7 +462,7 @@ function StayRow({ stay, members }: { stay: Stay; members: readonly Member[] }) 
   );
 }
 
-/** Fila de un evento del pueblo (estrella rosa, como en el calendario). */
+/** Fila de un evento del pueblo (estrella verde, como en el calendario). */
 function EventRow({ event }: { event: VillageEvent }) {
   return (
     <Link
@@ -471,7 +472,7 @@ function EventRow({ event }: { event: VillageEvent }) {
     >
       <span
         aria-hidden="true"
-        className="grid size-10 shrink-0 place-items-center rounded-full bg-rose-700 text-lg text-white"
+        className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-700 text-lg text-white"
       >
         ★
       </span>

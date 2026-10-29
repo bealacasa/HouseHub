@@ -12,6 +12,8 @@ import {
   buttonPrimary,
   buttonSecondary,
   inputClass,
+  buttonSmall,
+  buttonSmallDanger,
 } from "@/components/ui";
 import { toKey } from "@/features/calendar/stays";
 import { useHouse } from "@/features/house/HouseGate";
@@ -208,9 +210,6 @@ function DoList({ kind, items }: { kind: ChecklistKind; items: ChecklistItem[] }
   );
 }
 
-const small =
-  "min-h-12 rounded-xl border-2 border-field px-3 text-lg font-semibold disabled:opacity-40";
-
 function EditList({
   kind,
   items,
@@ -276,7 +275,7 @@ function EditList({
                       if (prev) swap.mutate({ a: item, b: prev });
                     }}
                     aria-label={`Subir «${item.text}»`}
-                    className={small}
+                    className={buttonSmall}
                   >
                     ↑ Subir
                   </button>
@@ -288,7 +287,7 @@ function EditList({
                       if (next) swap.mutate({ a: item, b: next });
                     }}
                     aria-label={`Bajar «${item.text}»`}
-                    className={small}
+                    className={buttonSmall}
                   >
                     ↓ Bajar
                   </button>
@@ -297,7 +296,7 @@ function EditList({
                     disabled={busy}
                     onClick={() => remove.mutate(item.id)}
                     aria-label={`Quitar «${item.text}»`}
-                    className={`${small} border-danger text-danger`}
+                    className={buttonSmallDanger}
                   >
                     Quitar
                   </button>

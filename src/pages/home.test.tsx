@@ -115,4 +115,18 @@ describe("inicio", () => {
     renderAt("/");
     expect(await screen.findByText(/Nada pendiente para hoy/)).toBeTruthy();
   });
+
+  it("sin foto de la casa, invita a ponerla (en el inicio y en Casa)", async () => {
+    installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    renderAt("/");
+    expect(
+      (await screen.findByRole("link", { name: /Poner una foto de la casa/ })).getAttribute("href"),
+    ).toBe("/casa/datos");
+  });
+
+  it("la pestaña Casa invita a poner la foto si no hay", async () => {
+    installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    renderAt("/casa");
+    expect(await screen.findByRole("link", { name: /Pon una foto de la casa/ })).toBeTruthy();
+  });
 });

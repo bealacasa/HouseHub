@@ -14,6 +14,18 @@ export const buttonSecondary = `${base} min-h-14 border-2 border-accent/40 bg-ac
 /** Acción peligrosa (borrar, cerrar sesión en todo). */
 export const buttonDanger = `${base} min-h-14 border-2 border-danger bg-surface text-lg text-danger`;
 
+/*
+ * Botones pequeños (dentro de una tarjeta: subir, bajar, quitar, cambiar…). Mismo aspecto
+ * que el secundario, más compactos. Solo hay estos estilos en toda la app: principal,
+ * secundario, peligro y sus versiones pequeñas, más el enlace de texto.
+ */
+const small =
+  "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 px-3 text-lg font-semibold transition active:scale-[0.98] disabled:opacity-40 motion-reduce:transition-none";
+export const buttonSmall = `${small} border-accent/40 bg-accent-soft text-accent`;
+export const buttonSmallDanger = `${small} border-danger/50 bg-surface text-danger`;
+/** Enlace de texto subrayado («Ver los pasados», «Borrar las tachadas»…). */
+export const textButton = "min-h-12 text-lg font-semibold text-accent underline";
+
 export const inputClass =
   "block min-h-14 w-full rounded-2xl border-2 border-field bg-surface px-4 text-lg text-text placeholder:text-muted focus:border-accent";
 

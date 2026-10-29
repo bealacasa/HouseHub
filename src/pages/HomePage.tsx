@@ -1,3 +1,4 @@
+import { TINTS } from "@/components/tints";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "react-router";
@@ -5,6 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import {
   BellIcon,
   CalendarIcon,
+  CameraIcon,
   DoorIcon,
   EuroIcon,
   HomeIcon,
@@ -56,6 +58,15 @@ export function HomePage() {
             Hola, {profile.displayName}
           </h1>
           <InTheHouse />
+          {!house.photoPath && (
+            <Link
+              to="/casa/datos"
+              className="mt-2 inline-flex min-h-12 items-center gap-2 text-base font-semibold underline underline-offset-4 opacity-90"
+            >
+              <CameraIcon className="size-5" />
+              Poner una foto de la casa
+            </Link>
+          )}
         </div>
       </header>
       <QuickActions />
@@ -160,13 +171,6 @@ function IconTile({
   );
 }
 
-const TINTS = {
-  leave: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200",
-  reminder: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200",
-  notes: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
-  calendar: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
-} as const;
-
 /** Fila que se toca: icono, texto y una línea de detalle opcional. */
 function Row({
   to,
@@ -241,7 +245,7 @@ function Today() {
       <Row
         key={r.id}
         to="/recordatorios"
-        icon={<IconTile Icon={BellIcon} tint={TINTS.reminder} />}
+        icon={<IconTile Icon={BellIcon} tint={TINTS.reminders} />}
         title={r.text}
         detail={dueLabel(r.due, today) ?? undefined}
         tone={r.due !== null && r.due < today ? "late" : "accent"}
@@ -343,19 +347,19 @@ const ACTIONS = [
     to: "/calendario/nueva",
     label: "Reservar días",
     Icon: CalendarIcon,
-    tint: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
+    tint: TINTS.calendar,
   },
   {
     to: "/gastos/nuevo",
     label: "Apuntar gasto",
     Icon: EuroIcon,
-    tint: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
+    tint: TINTS.expenses,
   },
   {
     to: "/notas",
     label: "Añadir nota",
     Icon: ListIcon,
-    tint: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
+    tint: TINTS.notes,
   },
 ] as const;
 

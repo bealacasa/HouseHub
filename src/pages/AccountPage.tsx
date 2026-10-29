@@ -1,3 +1,4 @@
+import { TINTS } from "@/components/tints";
 import { Link } from "react-router";
 import { LockIcon, UserIcon, UsersIcon } from "@/components/icons";
 import { HubGrid } from "@/components/HubGrid";
@@ -9,14 +10,14 @@ const ITEMS = [
     Icon: UsersIcon,
     label: "La familia",
     hint: "Invitar a alguien",
-    tint: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
+    tint: TINTS.settings,
   },
   {
     to: "/ajustes",
     Icon: UserIcon,
     label: "Mi cuenta",
     hint: "Foto, cara o huella",
-    tint: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200",
+    tint: TINTS.settings,
   },
 ] as const;
 

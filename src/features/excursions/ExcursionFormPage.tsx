@@ -10,6 +10,8 @@ import {
   buttonDanger,
   buttonPrimary,
   inputClass,
+  buttonSmall,
+  buttonSmallDanger,
 } from "@/components/ui";
 import { useHouse } from "@/features/house/HouseGate";
 import { errorMessage } from "@/features/house/house";
@@ -303,10 +305,7 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
               </div>
             )}
             <div className="flex flex-wrap gap-2">
-              <label
-                htmlFor={coverInput}
-                className={`${small} inline-flex cursor-pointer items-center`}
-              >
+              <label htmlFor={coverInput} className={`${buttonSmall} cursor-pointer`}>
                 {uploading === "cover"
                   ? "Subiendo…"
                   : cover
@@ -326,7 +325,7 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
                 }}
               />
               {cover && (
-                <button type="button" onClick={() => setCover(null)} className={small}>
+                <button type="button" onClick={() => setCover(null)} className={buttonSmall}>
                   Quitar la portada
                 </button>
               )}
@@ -411,9 +410,6 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
   );
 }
 
-const small =
-  "min-h-12 rounded-xl border-2 border-field px-3 text-lg font-semibold disabled:opacity-40";
-
 /** Un paso del formulario: foto, su frase y botones para ordenarlo, hacerlo portada o quitarlo. */
 function PhotoEditor({
   photo,
@@ -468,7 +464,7 @@ function PhotoEditor({
           onClick={() => onMove(-1)}
           disabled={index === 0}
           aria-label={`Subir el paso ${n}`}
-          className={small}
+          className={buttonSmall}
         >
           ↑ Subir
         </button>
@@ -477,7 +473,7 @@ function PhotoEditor({
           onClick={() => onMove(1)}
           disabled={index === total - 1}
           aria-label={`Bajar el paso ${n}`}
-          className={small}
+          className={buttonSmall}
         >
           ↓ Bajar
         </button>
@@ -485,7 +481,7 @@ function PhotoEditor({
           type="button"
           onClick={onMakeCover}
           aria-label={`Poner la foto del paso ${n} de portada`}
-          className={small}
+          className={buttonSmall}
         >
           ⭐ Poner de portada
         </button>
@@ -493,7 +489,7 @@ function PhotoEditor({
           type="button"
           onClick={onRemove}
           aria-label={`Quitar el paso ${n}`}
-          className={`${small} border-danger text-danger`}
+          className={buttonSmallDanger}
         >
           Quitar
         </button>

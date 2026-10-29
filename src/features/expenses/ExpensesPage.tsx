@@ -4,7 +4,15 @@ import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Avatar } from "@/components/Avatar";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { Card, ErrorMessage, PageTitle, buttonPrimary } from "@/components/ui";
+import {
+  Card,
+  ErrorMessage,
+  PageTitle,
+  buttonPrimary,
+  buttonSecondary,
+  buttonSmallDanger,
+  textButton,
+} from "@/components/ui";
 import { shortDay } from "@/components/form";
 import { toKey } from "@/features/calendar/stays";
 import { useHouse } from "@/features/house/HouseGate";
@@ -184,7 +192,7 @@ function SettleCard({ transfers, members }: { transfers: Transfer[]; members: re
                   type="button"
                   disabled={settle.isPending}
                   onClick={() => void markPaid(t)}
-                  className="mt-2 min-h-12 w-full rounded-xl border-2 border-accent bg-surface text-lg font-bold text-accent"
+                  className={`${buttonSecondary} mt-2`}
                 >
                   Marcar como pagado
                 </button>
@@ -314,7 +322,7 @@ function RecurringCard({
                         type="button"
                         disabled={stop.isPending}
                         onClick={() => void onStop(r)}
-                        className="mt-2 min-h-12 w-full rounded-xl border-2 border-border text-lg font-bold text-danger"
+                        className={`${buttonSmallDanger} mt-2 w-full`}
                       >
                         Dejar de repetir
                       </button>
@@ -394,11 +402,7 @@ function ExpenseList({ expenses, members }: { expenses: Expense[]; members: read
         </section>
       ))}
       {!all && months.length > 3 && (
-        <button
-          type="button"
-          onClick={() => setAll(true)}
-          className="min-h-12 text-lg font-semibold text-accent underline"
-        >
+        <button type="button" onClick={() => setAll(true)} className={textButton}>
           Ver meses anteriores
         </button>
       )}

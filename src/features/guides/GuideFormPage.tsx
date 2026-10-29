@@ -10,6 +10,8 @@ import {
   buttonPrimary,
   buttonSecondary,
   inputClass,
+  buttonSmall,
+  buttonSmallDanger,
 } from "@/components/ui";
 import { PrivacyHint } from "@/components/form";
 import { useHouse } from "@/features/house/HouseGate";
@@ -209,8 +211,6 @@ function StepEditor({
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const n = index + 1;
-  const small =
-    "min-h-12 rounded-xl border-2 border-field px-3 text-lg font-semibold disabled:opacity-40";
 
   async function onFile(file: File) {
     setUploading(true);
@@ -254,7 +254,7 @@ function StepEditor({
         />
       )}
       <div className="mt-3 flex flex-wrap gap-2">
-        <label htmlFor={inputId} className={`${small} inline-flex cursor-pointer items-center`}>
+        <label htmlFor={inputId} className={`${buttonSmall} cursor-pointer`}>
           {uploading ? "Subiendo…" : step.photo ? "📷 Cambiar foto" : "📷 Añadir foto"}
         </label>
         <input
@@ -269,7 +269,7 @@ function StepEditor({
           }}
         />
         {step.photo && (
-          <button type="button" onClick={() => onChange({ photo: null })} className={small}>
+          <button type="button" onClick={() => onChange({ photo: null })} className={buttonSmall}>
             Quitar foto
           </button>
         )}
@@ -278,7 +278,7 @@ function StepEditor({
           onClick={() => onMove(-1)}
           disabled={index === 0}
           aria-label={`Subir el paso ${n}`}
-          className={small}
+          className={buttonSmall}
         >
           ↑ Subir
         </button>
@@ -287,12 +287,12 @@ function StepEditor({
           onClick={() => onMove(1)}
           disabled={index === total - 1}
           aria-label={`Bajar el paso ${n}`}
-          className={small}
+          className={buttonSmall}
         >
           ↓ Bajar
         </button>
         {total > 1 && (
-          <button type="button" onClick={onRemove} className={`${small} border-danger text-danger`}>
+          <button type="button" onClick={onRemove} className={buttonSmallDanger}>
             Quitar paso
           </button>
         )}

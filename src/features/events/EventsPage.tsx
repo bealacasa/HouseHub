@@ -2,7 +2,14 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useState } from "react";
 import { Link } from "react-router";
-import { ErrorMessage, PageTitle, backLink, buttonPrimary, cardShadow } from "@/components/ui";
+import {
+  ErrorMessage,
+  PageTitle,
+  backLink,
+  buttonPrimary,
+  cardShadow,
+  textButton,
+} from "@/components/ui";
 import { periodLabel, toKey } from "@/features/calendar/stays";
 import { useEvents, type VillageEvent } from "./events";
 
@@ -46,7 +53,7 @@ export function EventsPage() {
             type="button"
             onClick={() => setShowPast((v) => !v)}
             aria-expanded={showPast}
-            className="min-h-12 text-lg font-semibold text-accent underline"
+            className={textButton}
           >
             {showPast ? "Ocultar los pasados" : `Ver los pasados (${past.length})`}
           </button>
@@ -73,16 +80,16 @@ export function EventCard({ event }: { event: VillageEvent }) {
     <Link
       to={`/eventos/${event.id}`}
       aria-label={`${event.title}. ${periodLabel(event)}${event.place ? `, en ${event.place}` : ""}`}
-      className={`flex min-h-20 items-center gap-4 rounded-3xl border border-rose-300/70 bg-surface p-4 active:scale-[0.99] dark:border-rose-900 ${cardShadow}`}
+      className={`flex min-h-20 items-center gap-4 rounded-3xl border border-emerald-300/70 bg-surface p-4 active:scale-[0.99] dark:border-emerald-900 ${cardShadow}`}
     >
       <span
         aria-hidden="true"
-        className="flex w-16 shrink-0 flex-col items-center overflow-hidden rounded-2xl bg-rose-50 text-center dark:bg-rose-950/60"
+        className="flex w-16 shrink-0 flex-col items-center overflow-hidden rounded-2xl bg-emerald-50 text-center dark:bg-emerald-950/60"
       >
-        <span className="w-full bg-rose-700 py-0.5 text-sm font-bold uppercase text-white">
+        <span className="w-full bg-emerald-700 py-0.5 text-sm font-bold uppercase text-white">
           {format(start, "MMM", { locale: es })}
         </span>
-        <span className="py-1 text-3xl font-extrabold leading-none text-rose-950 dark:text-rose-100">
+        <span className="py-1 text-3xl font-extrabold leading-none text-emerald-950 dark:text-emerald-100">
           {format(start, "d")}
         </span>
       </span>

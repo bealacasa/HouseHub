@@ -1,3 +1,4 @@
+import { TINTS } from "@/components/tints";
 import { CalendarIcon, MapIcon } from "@/components/icons";
 import { HubGrid } from "@/components/HubGrid";
 import { PageTitle } from "@/components/ui";
@@ -8,14 +9,14 @@ const ITEMS = [
     Icon: CalendarIcon,
     label: "Eventos del pueblo",
     hint: "Fiestas, mercado",
-    tint: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200",
+    tint: TINTS.events,
   },
   {
     to: "/excursiones",
     Icon: MapIcon,
     label: "Excursiones",
     hint: "Sitios cerca",
-    tint: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-200",
+    tint: TINTS.excursions,
   },
 ] as const;
 

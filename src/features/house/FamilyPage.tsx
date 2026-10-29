@@ -11,6 +11,9 @@ import {
   buttonPrimary,
   buttonSecondary,
   inputClass,
+  buttonSmall,
+  buttonSmallDanger,
+  textButton,
 } from "@/components/ui";
 import {
   errorMessage,
@@ -81,11 +84,7 @@ function MemberRow({
           </span>
         </span>
         {canManage && !editing && (
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="min-h-12 rounded-xl border-2 border-border px-4 text-lg font-semibold"
-          >
+          <button type="button" onClick={() => setEditing(true)} className={buttonSmall}>
             Cambiar
           </button>
         )}
@@ -238,7 +237,7 @@ function InviteCard({ members }: { houseId: string; members: Member[] }) {
               setLink(null);
               setCopied(false);
             }}
-            className="min-h-12 w-full text-lg font-semibold text-accent underline"
+            className={`${textButton} w-full`}
           >
             Crear otra invitación
           </button>
@@ -361,7 +360,7 @@ function InvitationsList({ members }: { members: Member[] }) {
             <button
               type="button"
               onClick={() => revoke.mutate(inv.id)}
-              className="min-h-12 rounded-xl border-2 border-danger px-4 text-lg font-semibold text-danger"
+              className={buttonSmallDanger}
             >
               Anular
             </button>

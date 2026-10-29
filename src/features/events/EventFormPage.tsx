@@ -132,7 +132,7 @@ function EventForm({ event }: { event?: VillageEvent }) {
             {validRange && (
               <p
                 aria-live="polite"
-                className="mt-4 flex items-center gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-lg font-semibold text-rose-900 dark:bg-rose-950/50 dark:text-rose-100"
+                className="mt-4 flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-lg font-semibold text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100"
               >
                 <span aria-hidden="true">⭐</span>
                 {periodLabel({ start, end })} · {daysLabel(start, end)}
