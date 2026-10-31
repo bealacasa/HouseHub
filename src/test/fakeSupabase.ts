@@ -319,6 +319,27 @@ export function installFakeSupabase(
     };
   };
 
-  setSupabaseForTests({ auth, from, rpc, functions } as unknown as SupabaseClient);
-  return { auth, profiles, user, tables, rpc, functions };
+  // Storage mínimo en memoria: subir, descargar, enlaces firmados y borrar.
+  const files = new Map<string, Blob>();
+  const storage = {
+    from: (bucket: string) => ({
+      upload: async (path: string, blob: Blob) => {
+        files.set(`${bucket}/${path}`, blob);
+        return ok({ path });
+      },
+      download: async (path: string) => {
+        const blob = files.get(`${bucket}/${path}`);
+        return blob ? ok(blob) : { data: null, error: { message: "404" } };
+      },
+      createSignedUrl: async (path: string) =>
+        ok({ signedUrl: `https://storage.test/${bucket}/${path}` }),
+      remove: async (paths: string[]) => {
+        for (const p of paths) files.delete(`${bucket}/${p}`);
+        return ok(paths);
+      },
+    }),
+  };
+
+  setSupabaseForTests({ auth, from, rpc, functions, storage } as unknown as SupabaseClient);
+  return { auth, profiles, user, tables, rpc, functions, files };
 }

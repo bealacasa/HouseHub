@@ -3,6 +3,7 @@ import { z } from "zod";
 import { processImage } from "@/lib/image";
 import { isMissingInDatabase } from "@/lib/dbErrors";
 import { getSupabase } from "@/lib/supabase";
+import { GpxError, MAX_GPX_BYTES, parseGpx, toCleanGpx, type TrackPoint } from "./gpx";
 import { expectChanged } from "@/lib/write";
 import type { DateKey } from "@/features/calendar/stays";
 
@@ -50,6 +51,8 @@ export type Excursion = {
   cover: string | null;
   /** Pasos para encontrar el sitio, en orden. */
   photos: ExcursionPhoto[];
+  /** Ruta GPX (limpia, solo puntos), o null. */
+  trackPath: string | null;
   lastVisited: DateKey | null;
   createdBy: string | null;
 };
@@ -59,6 +62,8 @@ export type ExcursionsData = {
   items: Excursion[];
   /** false = falta la migración 20261028000012: solo la portada, sin pasos con foto. */
   multiPhoto: boolean;
+  /** false = falta la migración 20261031000017: sin rutas GPX. */
+  tracks: boolean;
 };
 
 export const excursionInputSchema = z.object({
@@ -85,6 +90,7 @@ export const excursionInputSchema = z.object({
       }),
     )
     .max(MAX_PHOTOS, `Máximo ${MAX_PHOTOS} fotos para encontrar el sitio.`),
+  track: z.string().min(1).nullable(),
 });
 export type ExcursionInput = z.input<typeof excursionInputSchema>;
 
@@ -98,6 +104,7 @@ const excursionRow = z.object({
   map_url: z.string().nullable(),
   photo_path: z.string().nullable(),
   photos: z.array(z.object({ path: z.string(), caption: z.string() })).optional(),
+  track_path: z.string().nullable().optional(),
   last_visited: z.string().nullable(),
   created_by: z.uuid().nullable(),
 });
@@ -140,6 +147,7 @@ function toExcursion(raw: unknown): Excursion {
     mapUrl: r.map_url,
     cover: r.photo_path,
     photos,
+    trackPath: r.track_path ?? null,
     lastVisited: r.last_visited,
     createdBy: r.created_by,
   };
@@ -153,20 +161,28 @@ export function useExcursions() {
     queryFn: async (): Promise<ExcursionsData> => {
       const supabase = getSupabase();
       let multiPhoto = true;
-      let result: { data: unknown[] | null; error: unknown } = await supabase
-        .from("excursions")
-        .select(`${COLUMNS}, photos`)
-        .order("title");
+      let tracks = true;
+      const select = (columns: string) =>
+        supabase.from("excursions").select(columns).order("title") as unknown as Promise<{
+          data: unknown[] | null;
+          error: unknown;
+        }>;
+      let result = await select(`${COLUMNS}, photos, track_path`);
       if (result.error && isMissingColumn(result.error)) {
-        // Falta la migración de varias fotos: se sigue con una sola.
+        // Falta la migración de rutas GPX: se sigue sin ellas.
+        tracks = false;
+        result = await select(`${COLUMNS}, photos`);
+      }
+      if (result.error && isMissingColumn(result.error)) {
+        // Falta también la de varias fotos: se sigue con una sola.
         multiPhoto = false;
-        result = await supabase.from("excursions").select(COLUMNS).order("title");
+        result = await select(COLUMNS);
       }
       if (result.error) throw notReadyOr(result.error);
       const items = (result.data ?? [])
         .map(toExcursion)
         .sort((a, b) => a.title.localeCompare(b.title, "es"));
-      return { items, multiPhoto };
+      return { items, multiPhoto, tracks };
     },
   });
 }
@@ -178,10 +194,12 @@ export function useSaveExcursion(houseId: string) {
       id,
       input,
       multiPhoto,
+      tracks = false,
     }: {
       id?: string;
       input: ExcursionInput;
       multiPhoto: boolean;
+      tracks?: boolean;
     }) => {
       const e = excursionInputSchema.parse(input);
       const row: Record<string, unknown> = {
@@ -194,6 +212,7 @@ export function useSaveExcursion(houseId: string) {
         photo_path: e.cover,
       };
       if (multiPhoto) row.photos = e.photos;
+      if (tracks) row.track_path = e.track;
       const supabase = getSupabase();
       if (id) {
         const result = await supabase.from("excursions").update(row).eq("id", id).select("id");
@@ -239,6 +258,9 @@ export function useDeleteExcursion() {
         ...excursion.photos.map((p) => p.path),
       ];
       if (paths.length > 0) await supabase.storage.from("excursion-photos").remove(paths);
+      if (excursion.trackPath) {
+        await supabase.storage.from("excursion-tracks").remove([excursion.trackPath]);
+      }
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: excursionsKey }),
   });
@@ -282,4 +304,50 @@ export function lastVisitedLabel(lastVisited: DateKey | null, today: DateKey): s
   if (months < 12) return months === 1 ? "Fuimos hace un mes" : `Fuimos hace ${months} meses`;
   const years = Math.round(days / 365);
   return years === 1 ? "Fuimos hace un año" : `Fuimos hace ${years} años`;
+}
+
+/**
+ * Lee el GPX elegido, lo limpia (solo puntos) y lo sube. Devuelve su ruta en el bucket.
+ * Los errores de archivo (no es GPX, sin puntos, muy grande) salen como GpxError.
+ */
+export async function uploadExcursionTrack(
+  houseId: string,
+  file: File,
+  name: string,
+): Promise<string> {
+  if (file.size > MAX_GPX_BYTES) throw new GpxError("El archivo es demasiado grande (máx. 10 MB).");
+  const points = parseGpx(await file.text());
+  const clean = new Blob([toCleanGpx(points, name)], { type: "application/gpx+xml" });
+  const path = `${houseId}/${crypto.randomUUID()}.gpx`;
+  const { error } = await getSupabase()
+    .storage.from("excursion-tracks")
+    .upload(path, clean, { contentType: "application/gpx+xml", upsert: false });
+  if (error) throw error;
+  return path;
+}
+
+/** Los puntos de la ruta guardada (para dibujarla y calcular km y desnivel). */
+export function useExcursionTrack(path: string | null) {
+  return useQuery({
+    queryKey: ["excursion-track", path],
+    enabled: path !== null,
+    staleTime: Infinity,
+    queryFn: async (): Promise<TrackPoint[]> => {
+      const { data, error } = await getSupabase()
+        .storage.from("excursion-tracks")
+        .download(path ?? "");
+      if (error) throw error;
+      return parseGpx(await data.text());
+    },
+  });
+}
+
+/** Enlace temporal (5 min) para descargar la ruta con el nombre de la excursión. */
+export async function trackDownloadUrl(path: string, title: string): Promise<string> {
+  const fileName = `${title.replace(/[^\p{L}\p{N} _-]/gu, "").trim() || "ruta"}.gpx`;
+  const { data, error } = await getSupabase()
+    .storage.from("excursion-tracks")
+    .createSignedUrl(path, 300, { download: fileName });
+  if (error) throw error;
+  return data.signedUrl;
 }

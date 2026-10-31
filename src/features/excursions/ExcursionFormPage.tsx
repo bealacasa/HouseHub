@@ -24,6 +24,8 @@ import {
   MAX_PHOTOS,
   excursionInputSchema,
   uploadExcursionPhoto,
+  uploadExcursionTrack,
+  useExcursionTrack,
   useDeleteExcursion,
   useExcursionPhotoUrl,
   useExcursions,
@@ -34,7 +36,9 @@ import {
   type ExcursionPhoto,
 } from "./excursions";
 import { CoverBadge } from "./CoverBadge";
+import { GpxError } from "./gpx";
 import { ExcursionsNotReady } from "./NotReady";
+import { TrackView } from "./TrackView";
 
 /** Añadir (/excursiones/nueva) o cambiar (/excursiones/:id/editar) una excursión. */
 export function ExcursionFormPage() {
@@ -65,6 +69,7 @@ export function ExcursionFormPage() {
       key={id ?? "nueva"}
       excursion={excursion}
       multiPhoto={excursions.data?.multiPhoto ?? true}
+      tracks={excursions.data?.tracks ?? false}
     />
   );
 }
@@ -76,7 +81,15 @@ const choice =
 type DraftPhoto = ExcursionPhoto & { key: string };
 const draft = (p: ExcursionPhoto): DraftPhoto => ({ ...p, key: crypto.randomUUID() });
 
-function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multiPhoto: boolean }) {
+function ExcursionForm({
+  excursion,
+  multiPhoto,
+  tracks,
+}: {
+  excursion?: Excursion;
+  multiPhoto: boolean;
+  tracks: boolean;
+}) {
   const { house } = useHouse();
   const navigate = useNavigate();
   const [dialog, confirm] = useConfirm();
@@ -90,7 +103,9 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
   const [mapUrl, setMapUrl] = useState(excursion?.mapUrl ?? "");
   const [cover, setCover] = useState<string | null>(excursion?.cover ?? null);
   const [photos, setPhotos] = useState<DraftPhoto[]>(() => (excursion?.photos ?? []).map(draft));
-  const [uploading, setUploading] = useState<"cover" | "steps" | null>(null);
+  const [track, setTrack] = useState<string | null>(excursion?.trackPath ?? null);
+  const trackInput = useId();
+  const [uploading, setUploading] = useState<"cover" | "steps" | "track" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const coverUrl = useExcursionPhotoUrl(cover);
   const save = useSaveExcursion(house.id);
@@ -104,6 +119,18 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
       setCover(await uploadExcursionPhoto(house.id, file));
     } catch (e) {
       setError(e instanceof ImageError ? e.message : "No se pudo subir la foto.");
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  async function onTrackFile(file: File) {
+    setUploading("track");
+    setError(null);
+    try {
+      setTrack(await uploadExcursionTrack(house.id, file, title));
+    } catch (e) {
+      setError(e instanceof GpxError ? e.message : "No se pudo subir la ruta.");
     } finally {
       setUploading(null);
     }
@@ -153,6 +180,7 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
       difficulty,
       mapUrl,
       cover,
+      track,
       photos: photos.map(({ path, caption }) => ({ path, caption })),
     };
     const parsed = excursionInputSchema.safeParse(input);
@@ -162,7 +190,7 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
     }
     setError(null);
     save.mutate(
-      { id: excursion?.id, input, multiPhoto },
+      { id: excursion?.id, input, multiPhoto, tracks },
       { onSuccess: (id) => navigate(`/excursiones/${id}`, { replace: true }) },
     );
   }
@@ -385,6 +413,41 @@ function ExcursionForm({ excursion, multiPhoto }: { excursion?: Excursion; multi
               </>
             )}
           </FormSection>
+
+          {tracks && (
+            <FormSection
+              title="Ruta (archivo GPX)"
+              hint="De Wikiloc, Komoot, el reloj… Se guardan solo los puntos de la ruta."
+            >
+              {track && <TrackPreview path={track} />}
+              <div className="flex flex-wrap gap-2">
+                <label htmlFor={trackInput} className={`${buttonSmall} cursor-pointer`}>
+                  {uploading === "track"
+                    ? "Subiendo…"
+                    : track
+                      ? "🗺️ Cambiar la ruta"
+                      : "🗺️ Añadir archivo GPX"}
+                </label>
+                <input
+                  id={trackInput}
+                  type="file"
+                  accept=".gpx,application/gpx+xml"
+                  disabled={uploading !== null}
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void onTrackFile(file);
+                    e.target.value = "";
+                  }}
+                />
+                {track && (
+                  <button type="button" onClick={() => setTrack(null)} className={buttonSmall}>
+                    Quitar la ruta
+                  </button>
+                )}
+              </div>
+            </FormSection>
+          )}
         </fieldset>
 
         {(error || save.error || remove.error) && (
@@ -496,4 +559,12 @@ function PhotoEditor({
       </div>
     </Card>
   );
+}
+
+/** Vista previa de la ruta en el formulario (la misma que en la ficha). */
+function TrackPreview({ path }: { path: string }) {
+  const track = useExcursionTrack(path);
+  if (track.isPending) return <p className="text-lg text-muted">Leyendo la ruta…</p>;
+  if (track.isError) return <p className="text-lg text-danger">No se ha podido leer la ruta.</p>;
+  return <TrackView points={track.data} />;
 }

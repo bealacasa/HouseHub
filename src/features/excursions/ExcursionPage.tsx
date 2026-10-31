@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router";
 import {
   Card,
@@ -17,11 +18,14 @@ import {
   lastVisitedLabel,
   useExcursionPhotoUrl,
   useExcursions,
+  trackDownloadUrl,
+  useExcursionTrack,
   useMarkVisited,
   type ExcursionPhoto,
 } from "./excursions";
 import { CoverBadge } from "./CoverBadge";
 import { ExcursionsNotReady } from "./NotReady";
+import { TrackView } from "./TrackView";
 
 /** Ver una excursión: foto grande, lo esencial con palabras, el mapa y «Hoy hemos ido». */
 export function ExcursionPage() {
@@ -115,6 +119,8 @@ export function ExcursionPage() {
         </Card>
       )}
 
+      {excursion.trackPath && <TrackSection path={excursion.trackPath} title={excursion.title} />}
+
       <div className="space-y-3">
         {excursion.mapUrl && (
           <a
@@ -202,5 +208,53 @@ function PhotoCard({
         </div>
       </div>
     </Card>
+  );
+}
+
+/** «La ruta»: forma, perfil y datos, y el botón para descargar el GPX. */
+function TrackSection({ path, title }: { path: string; title: string }) {
+  const track = useExcursionTrack(path);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  async function download() {
+    setBusy(true);
+    setFailed(false);
+    try {
+      window.location.assign(await trackDownloadUrl(path, title));
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section aria-labelledby="la-ruta" className="mb-5">
+      <h2 id="la-ruta" className="mb-3 text-2xl font-bold">
+        La ruta
+      </h2>
+      <Card>
+        {track.isPending && <p className="text-lg text-muted">Leyendo la ruta…</p>}
+        {track.isError && <ErrorMessage>No se ha podido leer la ruta.</ErrorMessage>}
+        {track.isSuccess && <TrackView points={track.data} />}
+        <button
+          type="button"
+          onClick={() => void download()}
+          disabled={busy}
+          className={`${buttonSecondary} mt-4`}
+        >
+          <span aria-hidden="true">⬇️</span> Descargar la ruta (GPX)
+        </button>
+        <p className="mt-2 text-base text-muted">
+          Para abrirla en Wikiloc, Maps.me u otra app de mapas.
+        </p>
+        {failed && (
+          <div className="mt-3">
+            <ErrorMessage>No se ha podido descargar. Comprueba que tienes internet.</ErrorMessage>
+          </div>
+        )}
+      </Card>
+    </section>
   );
 }

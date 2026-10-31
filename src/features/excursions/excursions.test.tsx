@@ -29,6 +29,7 @@ const valid = {
   mapUrl: "",
   cover: null,
   photos: [],
+  track: null,
 };
 
 describe("excursiones", () => {
@@ -255,5 +256,54 @@ describe("excursiones", () => {
       }),
     );
     expect(fake.tables.excursions![0]).not.toHaveProperty("photos");
+  });
+
+  it("se sube un GPX: se limpia, se ve la ruta con sus km y se guarda", async () => {
+    const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    const user = userEvent.setup();
+    const memory = renderAt("/excursiones/nueva");
+    await user.type(await screen.findByLabelText("¿A dónde?"), "Cascada");
+    const gpx = new File(
+      [
+        `<gpx xmlns="http://www.topografix.com/GPX/1/1"><metadata><time>2026-10-01T08:00:00Z</time></metadata><trk><trkseg>
+          <trkpt lat="41" lon="-2"><ele>1000</ele><time>2026-10-01T08:00:00Z</time></trkpt>
+          <trkpt lat="41.009" lon="-2"><ele>1100</ele></trkpt></trkseg></trk></gpx>`,
+      ],
+      "ruta.gpx",
+      { type: "application/gpx+xml" },
+    );
+    await user.upload(screen.getByLabelText(/Añadir archivo GPX/), gpx);
+    expect(await screen.findByText("Distancia")).toBeTruthy();
+    expect(screen.getByText("100 m")).toBeTruthy();
+    const stored = [...fake.files.entries()].find(([k]) => k.startsWith("excursion-tracks/"));
+    expect(stored).toBeTruthy();
+    expect(await stored![1].text()).not.toContain("<time>");
+
+    await user.click(screen.getByRole("button", { name: "Añadir excursión" }));
+    await vi.waitFor(() => expect(memory.state.location.pathname).toMatch(/^\/excursiones\/.+/));
+    expect(fake.tables.excursions![0]!.track_path).toMatch(/\.gpx$/);
+    expect(await screen.findByRole("heading", { name: "La ruta" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Descargar la ruta/ })).toBeTruthy();
+  });
+
+  it("un archivo que no es GPX se rechaza con un mensaje claro", async () => {
+    installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    const user = userEvent.setup({ applyAccept: false });
+    renderAt("/excursiones/nueva");
+    const bad = new File(["hola"], "foto.gpx", { type: "application/gpx+xml" });
+    await user.upload(await screen.findByLabelText(/Añadir archivo GPX/), bad);
+    expect(await screen.findByText("Ese archivo no es una ruta GPX.")).toBeTruthy();
+  });
+
+  it("sin el SQL de rutas no aparece la sección GPX", async () => {
+    installFakeSupabase({
+      signedIn: true,
+      name: "Ana",
+      house: "Casa",
+      missingColumns: { excursions: ["track_path"] },
+    });
+    renderAt("/excursiones/nueva");
+    expect(await screen.findByLabelText("¿A dónde?")).toBeTruthy();
+    expect(screen.queryByText("Ruta (archivo GPX)")).toBeNull();
   });
 });
