@@ -36,7 +36,7 @@ import {
   type ExcursionPhoto,
 } from "./excursions";
 import { CoverBadge } from "./CoverBadge";
-import { GpxError } from "./gpx";
+import { GpxError, durationLabel } from "./gpx";
 import { ExcursionsNotReady } from "./NotReady";
 import { TrackView } from "./TrackView";
 
@@ -70,6 +70,7 @@ export function ExcursionFormPage() {
       excursion={excursion}
       multiPhoto={excursions.data?.multiPhoto ?? true}
       tracks={excursions.data?.tracks ?? false}
+      manualTime={excursions.data?.manualTime ?? false}
     />
   );
 }
@@ -85,10 +86,12 @@ function ExcursionForm({
   excursion,
   multiPhoto,
   tracks,
+  manualTime,
 }: {
   excursion?: Excursion;
   multiPhoto: boolean;
   tracks: boolean;
+  manualTime: boolean;
 }) {
   const { house } = useHouse();
   const navigate = useNavigate();
@@ -104,6 +107,7 @@ function ExcursionForm({
   const [cover, setCover] = useState<string | null>(excursion?.cover ?? null);
   const [photos, setPhotos] = useState<DraftPhoto[]>(() => (excursion?.photos ?? []).map(draft));
   const [track, setTrack] = useState<string | null>(excursion?.trackPath ?? null);
+  const [timeMinutes, setTimeMinutes] = useState<number | null>(excursion?.timeMinutes ?? null);
   const trackInput = useId();
   const [uploading, setUploading] = useState<"cover" | "steps" | "track" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -181,6 +185,7 @@ function ExcursionForm({
       mapUrl,
       cover,
       track,
+      timeMinutes: manualTime ? timeMinutes : null,
       photos: photos.map(({ path, caption }) => ({ path, caption })),
     };
     const parsed = excursionInputSchema.safeParse(input);
@@ -190,7 +195,7 @@ function ExcursionForm({
     }
     setError(null);
     save.mutate(
-      { id: excursion?.id, input, multiPhoto, tracks },
+      { id: excursion?.id, input, multiPhoto, tracks, manualTime },
       { onSuccess: (id) => navigate(`/excursiones/${id}`, { replace: true }) },
     );
   }
@@ -261,6 +266,13 @@ function ExcursionForm({
                 </label>
               ))}
             </div>
+            {manualTime && (
+              <ExactTime
+                value={timeMinutes}
+                onChange={setTimeMinutes}
+                trackPath={tracks ? track : null}
+              />
+            )}
           </FormSection>
 
           <FormSection title="¿Es fácil?" as="fieldset">
@@ -567,4 +579,89 @@ function TrackPreview({ path }: { path: string }) {
   if (track.isPending) return <p className="text-lg text-muted">Leyendo la ruta…</p>;
   if (track.isError) return <p className="text-lg text-danger">No se ha podido leer la ruta.</p>;
   return <TrackView track={track.data} />;
+}
+
+/**
+ * Tiempo exacto puesto a mano (horas y minutos). Si la ruta GPX trae el tiempo que se
+ * tardó, se puede copiar con un toque. Lo que se ponga aquí es lo que sale en la lista.
+ */
+function ExactTime({
+  value,
+  onChange,
+  trackPath,
+}: {
+  value: number | null;
+  onChange: (minutes: number | null) => void;
+  trackPath: string | null;
+}) {
+  const gpx = useExcursionTrack(trackPath);
+  const gpxMinutes = gpx.data?.times ? Math.max(1, Math.round(gpx.data.times.total / 60)) : null;
+  const hours = value === null ? 0 : Math.floor(value / 60);
+  const minutes = value === null ? 0 : value % 60;
+  const minuteOptions = Array.from({ length: 12 }, (_, i) => i * 5);
+  if (!minuteOptions.includes(minutes)) minuteOptions.push(minutes);
+  minuteOptions.sort((a, b) => a - b);
+  const set = (h: number, m: number) => onChange(h * 60 + m > 0 ? h * 60 + m : null);
+  const select = `${inputClass} text-xl font-semibold`;
+
+  return (
+    <div className="space-y-3 border-t border-border pt-4">
+      <p className={fieldLabel}>
+        Tiempo exacto <span className="font-normal text-muted">(opcional)</span>
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="exc-hours" className="mb-1 block text-base text-muted">
+            Horas
+          </label>
+          <select
+            id="exc-hours"
+            value={hours}
+            onChange={(e) => set(Number(e.target.value), minutes)}
+            className={select}
+          >
+            {Array.from({ length: 49 }, (_, h) => (
+              <option key={h} value={h}>
+                {h} h
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="exc-minutes" className="mb-1 block text-base text-muted">
+            Minutos
+          </label>
+          <select
+            id="exc-minutes"
+            value={minutes}
+            onChange={(e) => set(hours, Number(e.target.value))}
+            className={select}
+          >
+            {minuteOptions.map((m) => (
+              <option key={m} value={m}>
+                {m} min
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <p className="text-base text-muted">
+        {value
+          ? `Saldrá en la lista: ${durationLabel(value * 60)}.`
+          : "Si lo pones, es el tiempo que sale en la lista de excursiones."}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {gpxMinutes !== null && gpxMinutes !== value && (
+          <button type="button" onClick={() => onChange(gpxMinutes)} className={buttonSmall}>
+            Poner el del GPX ({durationLabel(gpxMinutes * 60)})
+          </button>
+        )}
+        {value !== null && (
+          <button type="button" onClick={() => onChange(null)} className={buttonSmall}>
+            Quitar el tiempo
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }

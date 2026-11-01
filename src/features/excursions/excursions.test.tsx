@@ -30,6 +30,7 @@ const valid = {
   cover: null,
   photos: [],
   track: null,
+  timeMinutes: null,
 };
 
 describe("excursiones", () => {
@@ -329,5 +330,74 @@ describe("excursiones", () => {
     renderAt("/excursiones");
     expect(await screen.findByText("3 h 25 min · 1 km · Fácil")).toBeTruthy();
     expect(screen.getByText("Un rato · Fácil")).toBeTruthy();
+  });
+
+  it("el tiempo exacto puesto a mano se guarda y sale en la lista por delante del GPX", async () => {
+    const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    const house = String(fake.tables.houses![0]!.id);
+    const path = `${house}/dddddddd-dddd-4ddd-8ddd-dddddddddddd.gpx`;
+    fake.files.set(
+      `excursion-tracks/${path}`,
+      new Blob([
+        toCleanGpx(
+          [
+            { lat: 41, lon: -2, ele: null },
+            { lat: 41.009, lon: -2, ele: null },
+          ],
+          "Mirador",
+          { total: 3 * 3600 + 25 * 60, moving: 3 * 3600 },
+        ),
+      ]),
+    );
+    const id = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+    fake.tables.excursions!.push({
+      id,
+      house_id: house,
+      title: "Mirador",
+      description: "",
+      getting_there: "",
+      duration: "medio",
+      difficulty: "facil",
+      map_url: null,
+      photo_path: null,
+      photos: [],
+      track_path: path,
+      time_minutes: null,
+      created_by: null,
+    });
+    const user = userEvent.setup();
+    const memory = renderAt(`/excursiones/${id}/editar`);
+    // Copiar el del GPX con un toque…
+    await user.click(await screen.findByRole("button", { name: "Poner el del GPX (3 h 25 min)" }));
+    expect((screen.getByLabelText("Horas") as HTMLSelectElement).value).toBe("3");
+    // …o ponerlo a mano: 2 h 30 min.
+    await user.selectOptions(screen.getByLabelText("Horas"), "2");
+    await user.selectOptions(screen.getByLabelText("Minutos"), "30");
+    expect(screen.getByText("Saldrá en la lista: 2 h 30 min.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await vi.waitFor(() => expect(fake.tables.excursions![0]!.time_minutes).toBe(150));
+    await vi.waitFor(() => expect(memory.state.location.pathname).toBe(`/excursiones/${id}`));
+    expect(await screen.findByText("Lo que se tarda")).toBeTruthy();
+
+    await user.click(screen.getByRole("link", { name: "← Excursiones" }));
+    expect(await screen.findByText("2 h 30 min · 1 km · Fácil")).toBeTruthy();
+  });
+
+  it("sin el SQL del tiempo exacto no aparece el campo y se guarda igual", async () => {
+    const fake = installFakeSupabase({
+      signedIn: true,
+      name: "Ana",
+      house: "Casa",
+      missingColumns: { excursions: ["time_minutes"] },
+    });
+    const user = userEvent.setup();
+    renderAt("/excursiones/nueva");
+    await user.type(await screen.findByLabelText("¿A dónde?"), "Ermita");
+    expect(screen.queryByLabelText("Horas")).toBeNull();
+    // La ruta GPX sí está (su SQL es anterior).
+    expect(screen.getByText("Ruta (archivo GPX)")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Añadir excursión" }));
+    await vi.waitFor(() => expect(fake.tables.excursions).toHaveLength(1));
+    expect(fake.tables.excursions![0]).not.toHaveProperty("time_minutes");
   });
 });

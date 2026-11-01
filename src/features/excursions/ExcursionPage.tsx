@@ -15,6 +15,7 @@ import {
   useExcursionPhotoUrl,
   useExcursions,
   trackDownloadUrl,
+  shownTime,
   useExcursionTrack,
   type Excursion,
   type ExcursionPhoto,
@@ -218,22 +219,28 @@ function TrackSection({ path, title }: { path: string; title: string }) {
 }
 
 /**
- * Cuánto dura: el tiempo exacto si el GPX venía grabado con horas («Se tardó 3 h 25 min»);
- * si no, lo que se eligió al apuntarla (un rato, media jornada…). Nunca un tiempo inventado.
+ * Cuánto dura: el tiempo exacto puesto a mano; si no, el que se tardó según el GPX; si no,
+ * lo que se eligió al apuntarla (un rato, media jornada…). Nunca un tiempo inventado.
  */
 function DurationCard({ excursion }: { excursion: Excursion }) {
   const track = useExcursionTrack(excursion.trackPath);
   const duration = DURATIONS[excursion.duration];
-  const times = track.data?.times ?? null;
+  const time = shownTime(excursion, track.data?.times ?? null);
   return (
     <Card className="text-center">
       <p aria-hidden="true" className="text-3xl">
         {duration.icon}
       </p>
       <p className="mt-1 text-xl font-bold">
-        {times ? durationLabel(times.total) : duration.label}
+        {time ? durationLabel(time.seconds) : duration.label}
       </p>
-      <p className="text-base text-muted">{times ? "Lo que se tardó" : duration.hint}</p>
+      <p className="text-base text-muted">
+        {time
+          ? time.source === "manual"
+            ? "Lo que se tarda"
+            : "Lo que se tardó (GPX)"
+          : duration.hint}
+      </p>
     </Card>
   );
 }

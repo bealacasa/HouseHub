@@ -6,6 +6,7 @@ import {
   DURATIONS,
   ExcursionsNotReadyError,
   useExcursionPhotoUrl,
+  shownTime,
   useExcursionTrack,
   useExcursions,
   type Excursion,
@@ -54,17 +55,17 @@ export function ExcursionsPage() {
 }
 
 /**
- * Tarjeta de excursión: portada, nombre, cuánto dura y si es fácil. Con ruta GPX grabada,
- * el tiempo exacto que se tardó y los km; si no, lo que se eligió (un rato, media jornada…).
+ * Tarjeta de excursión: portada, nombre, cuánto dura y si es fácil. El tiempo exacto puesto
+ * a mano o, si no, el del GPX (con sus km); si no hay, lo que se eligió (un rato…).
  */
 export function ExcursionCard({ excursion }: { excursion: Excursion }) {
   const url = useExcursionPhotoUrl(excursion.cover ?? excursion.photos[0]?.path ?? null);
   const track = useExcursionTrack(excursion.trackPath);
   const duration = DURATIONS[excursion.duration];
   const difficulty = DIFFICULTIES[excursion.difficulty];
-  const times = track.data?.times ?? null;
+  const time = shownTime(excursion, track.data?.times ?? null);
   const km = track.data ? distanceLabel(trackStats(track.data.points).distance) : null;
-  const details = [times ? durationLabel(times.total) : duration.label, km, difficulty.label]
+  const details = [time ? durationLabel(time.seconds) : duration.label, km, difficulty.label]
     .filter(Boolean)
     .join(" · ");
   return (

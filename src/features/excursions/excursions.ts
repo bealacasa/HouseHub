@@ -3,7 +3,14 @@ import { z } from "zod";
 import { processImage } from "@/lib/image";
 import { isMissingInDatabase } from "@/lib/dbErrors";
 import { getSupabase } from "@/lib/supabase";
-import { GpxError, MAX_GPX_BYTES, parseGpxFull, toCleanGpx, type ParsedTrack } from "./gpx";
+import {
+  GpxError,
+  MAX_GPX_BYTES,
+  parseGpxFull,
+  toCleanGpx,
+  type ParsedTrack,
+  type TrackTimes,
+} from "./gpx";
 import { expectChanged } from "@/lib/write";
 
 /*
@@ -51,6 +58,8 @@ export type Excursion = {
   photos: ExcursionPhoto[];
   /** Ruta GPX (limpia, solo puntos), o null. */
   trackPath: string | null;
+  /** Tiempo exacto puesto a mano, en minutos (va por delante del tiempo del GPX). */
+  timeMinutes: number | null;
   createdBy: string | null;
 };
 
@@ -61,6 +70,8 @@ export type ExcursionsData = {
   multiPhoto: boolean;
   /** false = falta la migración 20261031000017: sin rutas GPX. */
   tracks: boolean;
+  /** false = falta la migración 20261101000018: sin tiempo exacto a mano. */
+  manualTime: boolean;
 };
 
 export const excursionInputSchema = z.object({
@@ -88,6 +99,12 @@ export const excursionInputSchema = z.object({
     )
     .max(MAX_PHOTOS, `Máximo ${MAX_PHOTOS} fotos para encontrar el sitio.`),
   track: z.string().min(1).nullable(),
+  timeMinutes: z
+    .number()
+    .int()
+    .min(1, "El tiempo tiene que ser de al menos 1 minuto.")
+    .max(2880, "Máximo 48 horas.")
+    .nullable(),
 });
 export type ExcursionInput = z.input<typeof excursionInputSchema>;
 
@@ -102,6 +119,7 @@ const excursionRow = z.object({
   photo_path: z.string().nullable(),
   photos: z.array(z.object({ path: z.string(), caption: z.string() })).optional(),
   track_path: z.string().nullable().optional(),
+  time_minutes: z.number().int().nullable().optional(),
   created_by: z.uuid().nullable(),
 });
 
@@ -144,6 +162,7 @@ function toExcursion(raw: unknown): Excursion {
     cover: r.photo_path,
     photos,
     trackPath: r.track_path ?? null,
+    timeMinutes: r.time_minutes ?? null,
     createdBy: r.created_by,
   };
 }
@@ -155,29 +174,27 @@ export function useExcursions() {
     retry: (count, error) => !(error instanceof ExcursionsNotReadyError) && count < 2,
     queryFn: async (): Promise<ExcursionsData> => {
       const supabase = getSupabase();
-      let multiPhoto = true;
-      let tracks = true;
       const select = (columns: string) =>
         supabase.from("excursions").select(columns).order("title") as unknown as Promise<{
           data: unknown[] | null;
           error: unknown;
         }>;
-      let result = await select(`${COLUMNS}, photos, track_path`);
-      if (result.error && isMissingColumn(result.error)) {
-        // Falta la migración de rutas GPX: se sigue sin ellas.
-        tracks = false;
-        result = await select(`${COLUMNS}, photos`);
+      // Columnas que llegan con migraciones posteriores, en orden. Si falta alguna, se
+      // vuelve a pedir sin la última hasta que funcione: la app sigue con lo que haya.
+      const optional = ["photos", "track_path", "time_minutes"];
+      let result = await select([COLUMNS, ...optional].join(", "));
+      while (result.error && isMissingColumn(result.error) && optional.length > 0) {
+        optional.pop();
+        result = await select([COLUMNS, ...optional].join(", "));
       }
-      if (result.error && isMissingColumn(result.error)) {
-        // Falta también la de varias fotos: se sigue con una sola.
-        multiPhoto = false;
-        result = await select(COLUMNS);
-      }
+      const multiPhoto = optional.includes("photos");
+      const tracks = optional.includes("track_path");
+      const manualTime = optional.includes("time_minutes");
       if (result.error) throw notReadyOr(result.error);
       const items = (result.data ?? [])
         .map(toExcursion)
         .sort((a, b) => a.title.localeCompare(b.title, "es"));
-      return { items, multiPhoto, tracks };
+      return { items, multiPhoto, tracks, manualTime };
     },
   });
 }
@@ -190,11 +207,13 @@ export function useSaveExcursion(houseId: string) {
       input,
       multiPhoto,
       tracks = false,
+      manualTime = false,
     }: {
       id?: string;
       input: ExcursionInput;
       multiPhoto: boolean;
       tracks?: boolean;
+      manualTime?: boolean;
     }) => {
       const e = excursionInputSchema.parse(input);
       const row: Record<string, unknown> = {
@@ -208,6 +227,7 @@ export function useSaveExcursion(houseId: string) {
       };
       if (multiPhoto) row.photos = e.photos;
       if (tracks) row.track_path = e.track;
+      if (manualTime) row.time_minutes = e.timeMinutes;
       const supabase = getSupabase();
       if (id) {
         const result = await supabase.from("excursions").update(row).eq("id", id).select("id");
@@ -317,4 +337,17 @@ export async function trackDownloadUrl(path: string, title: string): Promise<str
     .createSignedUrl(path, 300, { download: fileName });
   if (error) throw error;
   return data.signedUrl;
+}
+
+/**
+ * El tiempo que se enseña: el puesto a mano; si no, el que se tardó según el GPX; si no,
+ * ninguno (y se enseña «un rato / media jornada…»). Nunca un tiempo calculado.
+ */
+export function shownTime(
+  excursion: Pick<Excursion, "timeMinutes">,
+  gpxTimes: TrackTimes | null,
+): { seconds: number; source: "manual" | "gpx" } | null {
+  if (excursion.timeMinutes) return { seconds: excursion.timeMinutes * 60, source: "manual" };
+  if (gpxTimes) return { seconds: gpxTimes.total, source: "gpx" };
+  return null;
 }
