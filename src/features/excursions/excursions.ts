@@ -340,14 +340,14 @@ export async function trackDownloadUrl(path: string, title: string): Promise<str
 }
 
 /**
- * El tiempo que se enseña: el puesto a mano; si no, el que se tardó según el GPX; si no,
- * ninguno (y se enseña «un rato / media jornada…»). Nunca un tiempo calculado.
+ * El tiempo que se enseña: el puesto a mano; si no, el tiempo en movimiento del GPX (sin
+ * las paradas); si no, ninguno (y se enseña «un rato / media jornada…»). Nunca inventado.
  */
 export function shownTime(
   excursion: Pick<Excursion, "timeMinutes">,
   gpxTimes: TrackTimes | null,
 ): { seconds: number; source: "manual" | "gpx" } | null {
   if (excursion.timeMinutes) return { seconds: excursion.timeMinutes * 60, source: "manual" };
-  if (gpxTimes) return { seconds: gpxTimes.total, source: "gpx" };
+  if (gpxTimes && gpxTimes.moving > 0) return { seconds: gpxTimes.moving, source: "gpx" };
   return null;
 }

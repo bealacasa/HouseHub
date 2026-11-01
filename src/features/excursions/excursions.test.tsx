@@ -328,7 +328,8 @@ describe("excursiones", () => {
     });
     fake.tables.excursions!.push(row(1, "Mirador", path), row(2, "Ermita", null));
     renderAt("/excursiones");
-    expect(await screen.findByText("3 h 25 min · 1 km · Fácil")).toBeTruthy();
+    // En la lista, el tiempo en movimiento (3 h), no el total con paradas (3 h 25 min).
+    expect(await screen.findByText("3 h · 1 km · Fácil")).toBeTruthy();
     expect(screen.getByText("Un rato · Fácil")).toBeTruthy();
   });
 
@@ -368,7 +369,9 @@ describe("excursiones", () => {
     const user = userEvent.setup();
     const memory = renderAt(`/excursiones/${id}/editar`);
     // Copiar el del GPX con un toque…
-    await user.click(await screen.findByRole("button", { name: "Poner el del GPX (3 h 25 min)" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Poner el del GPX (3 h en movimiento)" }),
+    );
     expect((screen.getByLabelText("Horas") as HTMLSelectElement).value).toBe("3");
     // …o ponerlo a mano: 2 h 30 min.
     await user.selectOptions(screen.getByLabelText("Horas"), "2");

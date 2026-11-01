@@ -56,7 +56,7 @@ export function ExcursionsPage() {
 
 /**
  * Tarjeta de excursión: portada, nombre, cuánto dura y si es fácil. El tiempo exacto puesto
- * a mano o, si no, el del GPX (con sus km); si no hay, lo que se eligió (un rato…).
+ * a mano o, si no, el tiempo en movimiento del GPX (con sus km); si no, lo que se eligió.
  */
 export function ExcursionCard({ excursion }: { excursion: Excursion }) {
   const url = useExcursionPhotoUrl(excursion.cover ?? excursion.photos[0]?.path ?? null);

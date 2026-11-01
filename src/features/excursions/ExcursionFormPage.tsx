@@ -595,7 +595,11 @@ function ExactTime({
   trackPath: string | null;
 }) {
   const gpx = useExcursionTrack(trackPath);
-  const gpxMinutes = gpx.data?.times ? Math.max(1, Math.round(gpx.data.times.total / 60)) : null;
+  // Del GPX se copia el tiempo en movimiento (sin las paradas), como en la lista.
+  const gpxMinutes =
+    gpx.data?.times && gpx.data.times.moving > 0
+      ? Math.max(1, Math.round(gpx.data.times.moving / 60))
+      : null;
   const hours = value === null ? 0 : Math.floor(value / 60);
   const minutes = value === null ? 0 : value % 60;
   const minuteOptions = Array.from({ length: 12 }, (_, i) => i * 5);
@@ -653,7 +657,7 @@ function ExactTime({
       <div className="flex flex-wrap gap-2">
         {gpxMinutes !== null && gpxMinutes !== value && (
           <button type="button" onClick={() => onChange(gpxMinutes)} className={buttonSmall}>
-            Poner el del GPX ({durationLabel(gpxMinutes * 60)})
+            Poner el del GPX ({durationLabel(gpxMinutes * 60)} en movimiento)
           </button>
         )}
         {value !== null && (

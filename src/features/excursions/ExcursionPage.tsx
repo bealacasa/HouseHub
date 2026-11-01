@@ -219,7 +219,7 @@ function TrackSection({ path, title }: { path: string; title: string }) {
 }
 
 /**
- * Cuánto dura: el tiempo exacto puesto a mano; si no, el que se tardó según el GPX; si no,
+ * Cuánto dura: el tiempo exacto puesto a mano; si no, el tiempo en movimiento del GPX; si no,
  * lo que se eligió al apuntarla (un rato, media jornada…). Nunca un tiempo inventado.
  */
 function DurationCard({ excursion }: { excursion: Excursion }) {
@@ -238,7 +238,7 @@ function DurationCard({ excursion }: { excursion: Excursion }) {
         {time
           ? time.source === "manual"
             ? "Lo que se tarda"
-            : "Lo que se tardó (GPX)"
+            : "En movimiento (GPX)"
           : duration.hint}
       </p>
     </Card>
