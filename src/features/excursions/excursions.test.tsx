@@ -4,9 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { router } from "@/app/router";
-import { toKey } from "@/features/calendar/stays";
 import { installFakeSupabase } from "@/test/fakeSupabase";
-import { excursionInputSchema, lastVisitedLabel } from "./excursions";
+import { excursionInputSchema } from "./excursions";
+import { toCleanGpx } from "./gpx";
 
 function renderAt(path: string) {
   localStorage.setItem("househub:passkey-asked", "1");
@@ -48,17 +48,7 @@ describe("excursiones", () => {
     expect(excursionInputSchema.safeParse({ ...valid, duration: "semana" }).success).toBe(false);
   });
 
-  it("dicen con palabras cuándo fuimos por última vez", () => {
-    const today = "2026-10-25";
-    expect(lastVisitedLabel(null, today)).toBe("Aún no hemos ido");
-    expect(lastVisitedLabel("2026-10-25", today)).toBe("Fuimos hoy");
-    expect(lastVisitedLabel("2026-10-24", today)).toBe("Fuimos ayer");
-    expect(lastVisitedLabel("2026-10-15", today)).toBe("Fuimos hace 10 días");
-    expect(lastVisitedLabel("2026-07-25", today)).toBe("Fuimos hace 3 meses");
-    expect(lastVisitedLabel("2024-10-25", today)).toBe("Fuimos hace 2 años");
-  });
-
-  it("se añade una, se ve su ficha y se apunta «Hoy hemos ido»", async () => {
+  it("se añade una y se ve su ficha (sin «cuándo hemos ido»)", async () => {
     const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
     const user = userEvent.setup();
     const memory = renderAt("/excursiones/nueva");
@@ -84,11 +74,9 @@ describe("excursiones", () => {
     expect(screen.getByRole("link", { name: /Ver en el mapa/ }).getAttribute("href")).toBe(
       "https://maps.app.goo.gl/abc",
     );
-    expect(screen.getByText("Aún no hemos ido")).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: /Hoy hemos ido/ }));
-    expect(await screen.findByText("Fuimos hoy")).toBeTruthy();
-    expect(fake.tables.excursions![0]!.last_visited).toBe(toKey(new Date()));
+    // Sin GPX: la duración elegida al apuntarla.
+    expect(screen.getByText("Día entero")).toBeTruthy();
+    expect(screen.queryByText(/hemos ido/i)).toBeNull();
   });
 
   it("sin nombre no se guarda y lo explica", async () => {
@@ -309,5 +297,37 @@ describe("excursiones", () => {
     renderAt("/excursiones/nueva");
     expect(await screen.findByLabelText("¿A dónde?")).toBeTruthy();
     expect(screen.queryByText("Ruta (archivo GPX)")).toBeNull();
+  });
+
+  it("en la lista sale el tiempo exacto y los km si la ruta GPX trae horas", async () => {
+    const fake = installFakeSupabase({ signedIn: true, name: "Ana", house: "Casa" });
+    const house = String(fake.tables.houses![0]!.id);
+    const path = `${house}/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.gpx`;
+    const points = [
+      { lat: 41, lon: -2, ele: 1000 },
+      { lat: 41.009, lon: -2, ele: 1100 },
+    ];
+    fake.files.set(
+      `excursion-tracks/${path}`,
+      new Blob([toCleanGpx(points, "Mirador", { total: 3 * 3600 + 25 * 60, moving: 3 * 3600 })]),
+    );
+    const row = (n: number, title: string, track: string | null) => ({
+      id: `cccccccc-cccc-4ccc-8ccc-00000000000${n}`,
+      house_id: house,
+      title,
+      description: "",
+      getting_there: "",
+      duration: "rato",
+      difficulty: "facil",
+      map_url: null,
+      photo_path: null,
+      photos: [],
+      track_path: track,
+      created_by: null,
+    });
+    fake.tables.excursions!.push(row(1, "Mirador", path), row(2, "Ermita", null));
+    renderAt("/excursiones");
+    expect(await screen.findByText("3 h 25 min · 1 km · Fácil")).toBeTruthy();
+    expect(screen.getByText("Un rato · Fácil")).toBeTruthy();
   });
 });

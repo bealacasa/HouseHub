@@ -5,12 +5,10 @@ import { isMissingInDatabase } from "@/lib/dbErrors";
 import { getSupabase } from "@/lib/supabase";
 import { GpxError, MAX_GPX_BYTES, parseGpxFull, toCleanGpx, type ParsedTrack } from "./gpx";
 import { expectChanged } from "@/lib/write";
-import type { DateKey } from "@/features/calendar/stays";
 
 /*
  * Excursiones cerca de la casa: qué es, cómo se llega, cuánto dura, si es fácil,
- * enlace al mapa, una foto de portada, fotos en orden para encontrar el sitio y «la última
- * vez que fuimos».
+ * enlace al mapa, una foto de portada, fotos en orden para encontrar el sitio y la ruta GPX.
  *
  * La portada va en photo_path y los pasos en photos. (Una versión anterior guardaba la
  * portada también como primera foto de photos, y la migración 0012 hizo lo mismo con las
@@ -53,7 +51,6 @@ export type Excursion = {
   photos: ExcursionPhoto[];
   /** Ruta GPX (limpia, solo puntos), o null. */
   trackPath: string | null;
-  lastVisited: DateKey | null;
   createdBy: string | null;
 };
 
@@ -105,7 +102,6 @@ const excursionRow = z.object({
   photo_path: z.string().nullable(),
   photos: z.array(z.object({ path: z.string(), caption: z.string() })).optional(),
   track_path: z.string().nullable().optional(),
-  last_visited: z.string().nullable(),
   created_by: z.uuid().nullable(),
 });
 
@@ -131,7 +127,7 @@ const isMissingColumn = (error: unknown) => {
 };
 
 const COLUMNS =
-  "id, title, description, getting_there, duration, difficulty, map_url, photo_path, last_visited, created_by";
+  "id, title, description, getting_there, duration, difficulty, map_url, photo_path, created_by";
 
 function toExcursion(raw: unknown): Excursion {
   const r = excursionRow.parse(raw);
@@ -148,7 +144,6 @@ function toExcursion(raw: unknown): Excursion {
     cover: r.photo_path,
     photos,
     trackPath: r.track_path ?? null,
-    lastVisited: r.last_visited,
     createdBy: r.created_by,
   };
 }
@@ -232,21 +227,6 @@ export function useSaveExcursion(houseId: string) {
   });
 }
 
-/** «Hoy hemos ido» (cualquier miembro de la casa). */
-export function useMarkVisited() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, date }: { id: string; date: DateKey }) => {
-      const { error } = await getSupabase().rpc("mark_excursion_visited", {
-        p_excursion: id,
-        p_date: date,
-      });
-      if (error) throw notReadyOr(error);
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: excursionsKey }),
-  });
-}
-
 export function useDeleteExcursion() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -291,19 +271,6 @@ export function useExcursionPhotoUrl(path: string | null) {
       return data.signedUrl;
     },
   });
-}
-
-/** "Fuimos hace 3 días" / "Aún no hemos ido". */
-export function lastVisitedLabel(lastVisited: DateKey | null, today: DateKey): string {
-  if (!lastVisited) return "Aún no hemos ido";
-  const days = Math.round((Date.parse(today) - Date.parse(lastVisited)) / 86_400_000);
-  if (days <= 0) return "Fuimos hoy";
-  if (days === 1) return "Fuimos ayer";
-  if (days < 31) return `Fuimos hace ${days} días`;
-  const months = Math.round(days / 30.4);
-  if (months < 12) return months === 1 ? "Fuimos hace un mes" : `Fuimos hace ${months} meses`;
-  const years = Math.round(days / 365);
-  return years === 1 ? "Fuimos hace un año" : `Fuimos hace ${years} años`;
 }
 
 /**

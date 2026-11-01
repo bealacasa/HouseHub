@@ -1,23 +1,22 @@
 import { Link } from "react-router";
 import { MapIcon } from "@/components/icons";
 import { ErrorMessage, PageTitle, backLink, buttonPrimary, cardShadow } from "@/components/ui";
-import { toKey } from "@/features/calendar/stays";
 import {
   DIFFICULTIES,
   DURATIONS,
   ExcursionsNotReadyError,
-  lastVisitedLabel,
   useExcursionPhotoUrl,
+  useExcursionTrack,
   useExcursions,
   type Excursion,
 } from "./excursions";
+import { distanceLabel, durationLabel, trackStats } from "./gpx";
 import { ExcursionsNotReady } from "./NotReady";
 
 /** Excursiones cerca de la casa: cascadas, miradores, pueblos de al lado… */
 export function ExcursionsPage() {
   const excursions = useExcursions();
   const all = excursions.data?.items ?? [];
-  const today = toKey(new Date());
   const notReady = excursions.error instanceof ExcursionsNotReadyError;
   return (
     <>
@@ -46,7 +45,7 @@ export function ExcursionsPage() {
       <ul className="space-y-3">
         {all.map((x) => (
           <li key={x.id}>
-            <ExcursionCard excursion={x} today={today} />
+            <ExcursionCard excursion={x} />
           </li>
         ))}
       </ul>
@@ -54,11 +53,20 @@ export function ExcursionsPage() {
   );
 }
 
-/** Tarjeta de excursión: portada, nombre, duración y dificultad, y cuándo fuimos. */
-export function ExcursionCard({ excursion, today }: { excursion: Excursion; today: string }) {
+/**
+ * Tarjeta de excursión: portada, nombre, cuánto dura y si es fácil. Con ruta GPX grabada,
+ * el tiempo exacto que se tardó y los km; si no, lo que se eligió (un rato, media jornada…).
+ */
+export function ExcursionCard({ excursion }: { excursion: Excursion }) {
   const url = useExcursionPhotoUrl(excursion.cover ?? excursion.photos[0]?.path ?? null);
+  const track = useExcursionTrack(excursion.trackPath);
   const duration = DURATIONS[excursion.duration];
   const difficulty = DIFFICULTIES[excursion.difficulty];
+  const times = track.data?.times ?? null;
+  const km = track.data ? distanceLabel(trackStats(track.data.points).distance) : null;
+  const details = [times ? durationLabel(times.total) : duration.label, km, difficulty.label]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <Link
       to={`/excursiones/${excursion.id}`}
@@ -76,12 +84,7 @@ export function ExcursionCard({ excursion, today }: { excursion: Excursion; toda
       )}
       <span className="min-w-0 flex-1">
         <span className="block text-xl font-bold">{excursion.title}</span>
-        <span className="block text-lg text-muted">
-          {duration.label} · {difficulty.label}
-        </span>
-        <span className="block text-base text-muted">
-          {lastVisitedLabel(excursion.lastVisited, today)}
-        </span>
+        <span className="block text-lg text-muted">{details}</span>
       </span>
       <span aria-hidden="true" className="text-3xl text-muted">
         ›

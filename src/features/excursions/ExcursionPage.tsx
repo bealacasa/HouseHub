@@ -4,34 +4,30 @@ import {
   Card,
   ErrorMessage,
   PageTitle,
-  SuccessMessage,
   backLink,
   buttonPrimary,
   buttonSecondary,
 } from "@/components/ui";
-import { longDate, toKey } from "@/features/calendar/stays";
-import { errorMessage } from "@/features/house/house";
 import {
   DIFFICULTIES,
   DURATIONS,
   ExcursionsNotReadyError,
-  lastVisitedLabel,
   useExcursionPhotoUrl,
   useExcursions,
   trackDownloadUrl,
   useExcursionTrack,
-  useMarkVisited,
+  type Excursion,
   type ExcursionPhoto,
 } from "./excursions";
 import { CoverBadge } from "./CoverBadge";
+import { durationLabel } from "./gpx";
 import { ExcursionsNotReady } from "./NotReady";
 import { TrackView } from "./TrackView";
 
-/** Ver una excursión: foto grande, lo esencial con palabras, el mapa y «Hoy hemos ido». */
+/** Ver una excursión: foto grande, lo esencial con palabras, la ruta y el mapa. */
 export function ExcursionPage() {
   const { id } = useParams();
   const excursions = useExcursions();
-  const visited = useMarkVisited();
   const excursion = (excursions.data?.items ?? []).find((x) => x.id === id);
   const photos = excursion?.photos ?? [];
   const cover = useExcursionPhotoUrl(excursion?.cover ?? null);
@@ -54,10 +50,7 @@ export function ExcursionPage() {
       </>
     );
   }
-  const today = toKey(new Date());
-  const duration = DURATIONS[excursion.duration];
   const difficulty = DIFFICULTIES[excursion.difficulty];
-  const wentToday = excursion.lastVisited === today;
 
   return (
     <>
@@ -77,13 +70,7 @@ export function ExcursionPage() {
       )}
 
       <div className="mb-5 grid grid-cols-2 gap-3">
-        <Card className="text-center">
-          <p aria-hidden="true" className="text-3xl">
-            {duration.icon}
-          </p>
-          <p className="mt-1 text-xl font-bold">{duration.label}</p>
-          <p className="text-base text-muted">{duration.hint}</p>
-        </Card>
+        <DurationCard excursion={excursion} />
         <Card className="text-center">
           <p aria-hidden="true" className="text-3xl">
             {difficulty.icon}
@@ -133,35 +120,6 @@ export function ExcursionPage() {
             Ver en el mapa
           </a>
         )}
-
-        <Card>
-          <p className="text-xl font-semibold">{lastVisitedLabel(excursion.lastVisited, today)}</p>
-          {excursion.lastVisited && (
-            <p className="text-lg text-muted first-letter:uppercase">
-              {longDate(excursion.lastVisited)}
-            </p>
-          )}
-          {!wentToday && (
-            <button
-              type="button"
-              disabled={visited.isPending}
-              onClick={() => visited.mutate({ id: excursion.id, date: today })}
-              className={`${buttonSecondary} mt-4`}
-            >
-              ✓ Hoy hemos ido
-            </button>
-          )}
-          {visited.isError && (
-            <div className="mt-3">
-              <ErrorMessage>{errorMessage(visited.error)}</ErrorMessage>
-            </div>
-          )}
-          {visited.isSuccess && wentToday && (
-            <div className="mt-3">
-              <SuccessMessage>¡Apuntado!</SuccessMessage>
-            </div>
-          )}
-        </Card>
 
         {
           <Link to={`/excursiones/${excursion.id}/editar`} className={buttonSecondary}>
@@ -256,5 +214,26 @@ function TrackSection({ path, title }: { path: string; title: string }) {
         )}
       </Card>
     </section>
+  );
+}
+
+/**
+ * Cuánto dura: el tiempo exacto si el GPX venía grabado con horas («Se tardó 3 h 25 min»);
+ * si no, lo que se eligió al apuntarla (un rato, media jornada…). Nunca un tiempo inventado.
+ */
+function DurationCard({ excursion }: { excursion: Excursion }) {
+  const track = useExcursionTrack(excursion.trackPath);
+  const duration = DURATIONS[excursion.duration];
+  const times = track.data?.times ?? null;
+  return (
+    <Card className="text-center">
+      <p aria-hidden="true" className="text-3xl">
+        {duration.icon}
+      </p>
+      <p className="mt-1 text-xl font-bold">
+        {times ? durationLabel(times.total) : duration.label}
+      </p>
+      <p className="text-base text-muted">{times ? "Lo que se tardó" : duration.hint}</p>
+    </Card>
   );
 }
