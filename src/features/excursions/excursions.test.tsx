@@ -275,8 +275,10 @@ describe("excursiones", () => {
     await user.upload(screen.getByLabelText(/Añadir archivo GPX/), gpx);
     expect(await screen.findByText("Distancia")).toBeTruthy();
     expect(screen.getByText("100 m")).toBeTruthy();
-    // El GPX trae la hora de salida pero no la de llegada: no se sabe cuánto se tardó.
-    expect(screen.getByText("Tiempo aprox.")).toBeTruthy();
+    // El GPX trae la hora de salida pero no la de llegada: no se sabe cuánto se tardó,
+    // así que no se enseña ningún tiempo.
+    expect(screen.queryByText("Se tardó")).toBeNull();
+    expect(screen.queryByText(/aprox/i)).toBeNull();
     const stored = [...fake.files.entries()].find(([k]) => k.startsWith("excursion-tracks/"));
     expect(stored).toBeTruthy();
     expect(await stored![1].text()).not.toContain("<time>");

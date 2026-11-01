@@ -1,7 +1,6 @@
 import {
   distanceLabel,
   durationLabel,
-  estimatedSeconds,
   profilePath,
   shapePath,
   trackStats,
@@ -11,13 +10,12 @@ import {
 /**
  * La ruta sin mapa de fondo (la app no carga nada de fuera): su forma, el perfil de
  * subidas y bajadas y los datos que importan para decidir (km, tiempo, desnivel, altura).
- * El tiempo es el que se tardó si el GPX venía grabado con horas; si no, uno aproximado.
+ * El tiempo solo aparece si el GPX venía grabado con horas: nunca se calcula ni se supone.
  * Solo SVG con clases (la CSP no permite estilos en línea).
  */
 export function TrackView({ track }: { track: ParsedTrack }) {
   const { points, times } = track;
   const stats = trackStats(points);
-  const estimate = estimatedSeconds(stats);
   const shape = shapePath(points, 320, 200);
   const profile = profilePath(points, stats.cumulative, 320, 80);
   const toXY = (cmd: string | undefined) => {
@@ -33,9 +31,7 @@ export function TrackView({ track }: { track: ParsedTrack }) {
 
   const facts = [
     { label: "Distancia", value: distanceLabel(stats.distance) },
-    times
-      ? { label: "Se tardó", value: durationLabel(times.total) }
-      : { label: "Tiempo aprox.", value: `≈ ${durationLabel(estimate)}` },
+    times && { label: "Se tardó", value: durationLabel(times.total) },
     stats.ascent !== null && { label: "Sube", value: `${stats.ascent} m` },
     stats.descent !== null && { label: "Baja", value: `${stats.descent} m` },
     stats.maxEle !== null && { label: "Altura máxima", value: `${stats.maxEle} m` },
@@ -109,11 +105,11 @@ export function TrackView({ track }: { track: ParsedTrack }) {
           </div>
         ))}
       </dl>
-      <p className="text-base text-muted">
-        {times
-          ? "Tiempo de la vez que se grabó la ruta, contando las paradas."
-          : "Tiempo calculado con los km y las cuestas, a ritmo tranquilo y sin contar paradas."}
-      </p>
+      {times && (
+        <p className="text-base text-muted">
+          Tiempo de la vez que se grabó la ruta, contando las paradas.
+        </p>
+      )}
       {profile && (
         <figure>
           <figcaption className="mb-1 text-base font-semibold text-muted">

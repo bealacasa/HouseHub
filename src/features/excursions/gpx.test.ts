@@ -3,7 +3,6 @@ import {
   GpxError,
   distanceLabel,
   durationLabel,
-  estimatedSeconds,
   parseGpxFull,
   parseGpx,
   profilePath,
@@ -94,10 +93,7 @@ describe("rutas GPX", () => {
     expect(parseGpxFull(clean).times).toEqual({ total: 2400, moving: 2400 });
   });
 
-  it("sin horas, da un tiempo aproximado con los km y las cuestas", () => {
-    // 8 km en llano: 2 h. Con 600 m de subida y bajada: 1,5 h + 1 h = 2,5 h → 2,5 + 2/2.
-    expect(estimatedSeconds({ distance: 8000, ascent: 0, descent: 0 })).toBe(2 * 3600);
-    expect(estimatedSeconds({ distance: 8000, ascent: 600, descent: 600 })).toBe(3.5 * 3600);
+  it("sin horas no hay tiempo (no se calcula ni se supone)", () => {
     expect(parseGpxFull(GPX.replace(/<time>[^<]*<\/time>/g, "")).times).toBeNull();
   });
 

@@ -261,20 +261,6 @@ export function profilePath(
   return `${line} L${w},${h} L0,${h} Z`;
 }
 
-/**
- * Tiempo aproximado a ritmo tranquilo cuando el GPX no trae horas (método habitual de
- * senderismo): 4 km por hora en llano, 400 m de subida y 600 m de bajada por hora; se
- * suma el mayor de los dos y la mitad del menor. En segundos.
- */
-export function estimatedSeconds(
-  stats: Pick<TrackStats, "distance" | "ascent" | "descent">,
-): number {
-  const flat = stats.distance / 1000 / 4;
-  const vertical = (stats.ascent ?? 0) / 400 + (stats.descent ?? 0) / 600;
-  const hours = Math.max(flat, vertical) + Math.min(flat, vertical) / 2;
-  return Math.round(hours * 3600);
-}
-
 /** «3 h 20 min» / «45 min» (redondeado a 5 minutos si pasa de una hora). */
 export function durationLabel(seconds: number): string {
   const minutes = Math.max(1, Math.round(seconds / 60));
