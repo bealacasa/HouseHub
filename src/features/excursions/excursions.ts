@@ -3,7 +3,7 @@ import { z } from "zod";
 import { processImage } from "@/lib/image";
 import { isMissingInDatabase } from "@/lib/dbErrors";
 import { getSupabase } from "@/lib/supabase";
-import { GpxError, MAX_GPX_BYTES, parseGpx, toCleanGpx, type TrackPoint } from "./gpx";
+import { GpxError, MAX_GPX_BYTES, parseGpxFull, toCleanGpx, type ParsedTrack } from "./gpx";
 import { expectChanged } from "@/lib/write";
 import type { DateKey } from "@/features/calendar/stays";
 
@@ -316,8 +316,8 @@ export async function uploadExcursionTrack(
   name: string,
 ): Promise<string> {
   if (file.size > MAX_GPX_BYTES) throw new GpxError("El archivo es demasiado grande (máx. 10 MB).");
-  const points = parseGpx(await file.text());
-  const clean = new Blob([toCleanGpx(points, name)], { type: "application/gpx+xml" });
+  const { points, times } = parseGpxFull(await file.text());
+  const clean = new Blob([toCleanGpx(points, name, times)], { type: "application/gpx+xml" });
   const path = `${houseId}/${crypto.randomUUID()}.gpx`;
   const { error } = await getSupabase()
     .storage.from("excursion-tracks")
@@ -326,18 +326,18 @@ export async function uploadExcursionTrack(
   return path;
 }
 
-/** Los puntos de la ruta guardada (para dibujarla y calcular km y desnivel). */
+/** La ruta guardada: sus puntos (dibujo, km y desnivel) y cuánto se tardó, si se sabe. */
 export function useExcursionTrack(path: string | null) {
   return useQuery({
     queryKey: ["excursion-track", path],
     enabled: path !== null,
     staleTime: Infinity,
-    queryFn: async (): Promise<TrackPoint[]> => {
+    queryFn: async (): Promise<ParsedTrack> => {
       const { data, error } = await getSupabase()
         .storage.from("excursion-tracks")
         .download(path ?? "");
       if (error) throw error;
-      return parseGpx(await data.text());
+      return parseGpxFull(await data.text());
     },
   });
 }

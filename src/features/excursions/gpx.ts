@@ -9,6 +9,18 @@
 
 export type TrackPoint = { lat: number; lon: number; ele: number | null };
 
+/**
+ * Cuánto se tardó, en segundos: total (de la salida a la llegada) y en movimiento (sin
+ * las paradas). Solo duraciones: la fecha y las horas del GPX original no se guardan.
+ */
+export type TrackTimes = { total: number; moving: number };
+
+/** Lo que se saca de un GPX: los puntos y, si venía grabado con horas, cuánto se tardó. */
+export type ParsedTrack = { points: TrackPoint[]; times: TrackTimes | null };
+
+/** Espacio de nombres propio para guardar la duración dentro del GPX limpio. */
+const HH_NS = "https://househub.app/gpx/1";
+
 export class GpxError extends Error {}
 
 /** Archivo original de hasta 10 MB (rutas largas con muchos puntos). */
@@ -33,6 +45,11 @@ export function thin<T>(points: readonly T[], max: number): T[] {
 
 /** Lee un GPX y devuelve sus puntos (de la ruta grabada o, si no hay, de la ruta planificada). */
 export function parseGpx(text: string): TrackPoint[] {
+  return parseGpxFull(text).points;
+}
+
+/** Como parseGpx, y además cuánto se tardó si el GPX trae las horas de cada punto. */
+export function parseGpxFull(text: string): ParsedTrack {
   const doc = new DOMParser().parseFromString(text, "application/xml");
   if (
     doc.getElementsByTagName("parsererror").length > 0 ||
@@ -40,19 +57,63 @@ export function parseGpx(text: string): TrackPoint[] {
   ) {
     throw new GpxError("Ese archivo no es una ruta GPX.");
   }
+  type Timed = TrackPoint & { time: number | null };
   const read = (tag: string) =>
-    Array.from(doc.getElementsByTagNameNS("*", tag)).flatMap((el): TrackPoint[] => {
+    Array.from(doc.getElementsByTagNameNS("*", tag)).flatMap((el): Timed[] => {
       const lat = num(el.getAttribute("lat"));
       const lon = num(el.getAttribute("lon"));
       if (lat === null || lon === null || Math.abs(lat) > 90 || Math.abs(lon) > 180) return [];
-      const eleEl = Array.from(el.children).find((c) => c.localName === "ele");
-      const ele = num(eleEl?.textContent);
-      return [{ lat, lon, ele: ele !== null && ele > -500 && ele < 9000 ? ele : null }];
+      const child = (name: string) => Array.from(el.children).find((c) => c.localName === name);
+      const ele = num(child("ele")?.textContent);
+      const ms = Date.parse(child("time")?.textContent ?? "");
+      return [
+        {
+          lat,
+          lon,
+          ele: ele !== null && ele > -500 && ele < 9000 ? ele : null,
+          time: Number.isFinite(ms) ? ms : null,
+        },
+      ];
     });
-  let points = read("trkpt");
-  if (points.length < 2) points = read("rtept");
-  if (points.length < 2) throw new GpxError("La ruta no tiene puntos suficientes.");
-  return thin(points, MAX_POINTS);
+  let timed = read("trkpt");
+  if (timed.length < 2) timed = read("rtept");
+  if (timed.length < 2) throw new GpxError("La ruta no tiene puntos suficientes.");
+  const points = thin(
+    timed.map(({ lat, lon, ele }) => ({ lat, lon, ele })),
+    MAX_POINTS,
+  );
+  return { points, times: timesFromPoints(timed) ?? savedTimes(doc) };
+}
+
+/** Duración a partir de las horas de los puntos (o null si no las hay o no tienen sentido). */
+function timesFromPoints(
+  points: readonly (TrackPoint & { time: number | null })[],
+): TrackTimes | null {
+  const withTime = points.filter((p): p is TrackPoint & { time: number } => p.time !== null);
+  if (withTime.length < 2 || withTime.length < points.length * 0.8) return null;
+  const first = withTime[0];
+  const last = withTime.at(-1);
+  if (!first || !last) return null;
+  const total = (last.time - first.time) / 1000;
+  if (total <= 0 || total > 7 * 24 * 3600) return null;
+  // En movimiento: tramos a más de ~1 km/h (en las paradas apenas se avanza y no cuentan).
+  let moving = 0;
+  withTime.forEach((p, i) => {
+    const prev = withTime[i - 1];
+    if (!prev) return;
+    const dt = (p.time - prev.time) / 1000;
+    if (dt > 0 && meters(prev, p) / dt >= 0.3) moving += dt;
+  });
+  return { total: Math.round(total), moving: Math.round(Math.min(moving, total)) };
+}
+
+/** La duración que la propia app guardó en un GPX limpio (sin horas). */
+function savedTimes(doc: Document): TrackTimes | null {
+  const el = doc.getElementsByTagNameNS(HH_NS, "tiempo")[0];
+  const total = num(el?.getAttribute("total"));
+  const moving = num(el?.getAttribute("movimiento"));
+  if (total === null || moving === null || total <= 0 || total > 7 * 24 * 3600) return null;
+  return { total: Math.round(total), moving: Math.round(Math.min(Math.max(moving, 0), total)) };
 }
 
 const round = (n: number, decimals: number) => Number(n.toFixed(decimals));
@@ -62,8 +123,15 @@ const escapeXml = (s: string) =>
     (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[c] ?? c,
   );
 
-/** GPX limpio escrito por la app: nombre de la excursión y los puntos, nada más. */
-export function toCleanGpx(points: readonly TrackPoint[], name: string): string {
+/**
+ * GPX limpio escrito por la app: nombre de la excursión, los puntos y, si se sabe, cuánto
+ * se tardó (solo la duración, sin fecha ni horas). Nada más del archivo original.
+ */
+export function toCleanGpx(
+  points: readonly TrackPoint[],
+  name: string,
+  times: TrackTimes | null = null,
+): string {
   const pts = points
     .map(
       (p) =>
@@ -74,7 +142,10 @@ export function toCleanGpx(points: readonly TrackPoint[], name: string): string 
     .join("");
   return (
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<gpx version="1.1" creator="House Hub" xmlns="http://www.topografix.com/GPX/1/1">` +
+    `<gpx version="1.1" creator="House Hub" xmlns="http://www.topografix.com/GPX/1/1" xmlns:hh="${HH_NS}">` +
+    (times
+      ? `<metadata><extensions><hh:tiempo total="${times.total}" movimiento="${times.moving}"/></extensions></metadata>`
+      : "") +
     `<trk><name>${escapeXml(name || "Ruta")}</name><trkseg>${pts}</trkseg></trk></gpx>\n`
   );
 }
@@ -188,4 +259,28 @@ export function profilePath(
     )
     .join(" ");
   return `${line} L${w},${h} L0,${h} Z`;
+}
+
+/**
+ * Tiempo aproximado a ritmo tranquilo cuando el GPX no trae horas (método habitual de
+ * senderismo): 4 km por hora en llano, 400 m de subida y 600 m de bajada por hora; se
+ * suma el mayor de los dos y la mitad del menor. En segundos.
+ */
+export function estimatedSeconds(
+  stats: Pick<TrackStats, "distance" | "ascent" | "descent">,
+): number {
+  const flat = stats.distance / 1000 / 4;
+  const vertical = (stats.ascent ?? 0) / 400 + (stats.descent ?? 0) / 600;
+  const hours = Math.max(flat, vertical) + Math.min(flat, vertical) / 2;
+  return Math.round(hours * 3600);
+}
+
+/** «3 h 20 min» / «45 min» (redondeado a 5 minutos si pasa de una hora). */
+export function durationLabel(seconds: number): string {
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  if (minutes < 60) return `${minutes} min`;
+  const rounded = Math.round(minutes / 5) * 5;
+  const h = Math.floor(rounded / 60);
+  const m = rounded % 60;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }

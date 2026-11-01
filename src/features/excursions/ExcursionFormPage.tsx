@@ -566,5 +566,5 @@ function TrackPreview({ path }: { path: string }) {
   const track = useExcursionTrack(path);
   if (track.isPending) return <p className="text-lg text-muted">Leyendo la ruta…</p>;
   if (track.isError) return <p className="text-lg text-danger">No se ha podido leer la ruta.</p>;
-  return <TrackView points={track.data} />;
+  return <TrackView track={track.data} />;
 }

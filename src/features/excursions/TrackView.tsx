@@ -1,12 +1,23 @@
-import { distanceLabel, profilePath, shapePath, trackStats, type TrackPoint } from "./gpx";
+import {
+  distanceLabel,
+  durationLabel,
+  estimatedSeconds,
+  profilePath,
+  shapePath,
+  trackStats,
+  type ParsedTrack,
+} from "./gpx";
 
 /**
  * La ruta sin mapa de fondo (la app no carga nada de fuera): su forma, el perfil de
- * subidas y bajadas y los datos que importan para decidir (km, desnivel, altura).
+ * subidas y bajadas y los datos que importan para decidir (km, tiempo, desnivel, altura).
+ * El tiempo es el que se tardó si el GPX venía grabado con horas; si no, uno aproximado.
  * Solo SVG con clases (la CSP no permite estilos en línea).
  */
-export function TrackView({ points }: { points: TrackPoint[] }) {
+export function TrackView({ track }: { track: ParsedTrack }) {
+  const { points, times } = track;
   const stats = trackStats(points);
+  const estimate = estimatedSeconds(stats);
   const shape = shapePath(points, 320, 200);
   const profile = profilePath(points, stats.cumulative, 320, 80);
   const toXY = (cmd: string | undefined) => {
@@ -22,9 +33,17 @@ export function TrackView({ points }: { points: TrackPoint[] }) {
 
   const facts = [
     { label: "Distancia", value: distanceLabel(stats.distance) },
+    times
+      ? { label: "Se tardó", value: durationLabel(times.total) }
+      : { label: "Tiempo aprox.", value: `≈ ${durationLabel(estimate)}` },
     stats.ascent !== null && { label: "Sube", value: `${stats.ascent} m` },
     stats.descent !== null && { label: "Baja", value: `${stats.descent} m` },
     stats.maxEle !== null && { label: "Altura máxima", value: `${stats.maxEle} m` },
+    times &&
+      times.total - times.moving >= 300 && {
+        label: "En movimiento",
+        value: durationLabel(times.moving),
+      },
   ].filter((f): f is { label: string; value: string } => Boolean(f));
 
   return (
@@ -90,6 +109,11 @@ export function TrackView({ points }: { points: TrackPoint[] }) {
           </div>
         ))}
       </dl>
+      <p className="text-base text-muted">
+        {times
+          ? "Tiempo de la vez que se grabó la ruta, contando las paradas."
+          : "Tiempo calculado con los km y las cuestas, a ritmo tranquilo y sin contar paradas."}
+      </p>
       {profile && (
         <figure>
           <figcaption className="mb-1 text-base font-semibold text-muted">

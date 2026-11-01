@@ -237,7 +237,7 @@ function TrackSection({ path, title }: { path: string; title: string }) {
       <Card>
         {track.isPending && <p className="text-lg text-muted">Leyendo la ruta…</p>}
         {track.isError && <ErrorMessage>No se ha podido leer la ruta.</ErrorMessage>}
-        {track.isSuccess && <TrackView points={track.data} />}
+        {track.isSuccess && <TrackView track={track.data} />}
         <button
           type="button"
           onClick={() => void download()}

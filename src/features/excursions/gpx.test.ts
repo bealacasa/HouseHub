@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   GpxError,
   distanceLabel,
+  durationLabel,
+  estimatedSeconds,
+  parseGpxFull,
   parseGpx,
   profilePath,
   shapePath,
@@ -70,5 +73,37 @@ describe("rutas GPX", () => {
   it("reparte los puntos si hay demasiados (siempre el primero y el último)", () => {
     const many = Array.from({ length: 10 }, (_, i) => i);
     expect(thin(many, 4)).toEqual([0, 3, 6, 9]);
+  });
+
+  it("con horas, calcula cuánto se tardó (total y sin las paradas)", () => {
+    const gpx = `<gpx xmlns="http://www.topografix.com/GPX/1/1"><trk><trkseg>
+      <trkpt lat="41" lon="-2"><time>2026-10-01T08:00:00Z</time></trkpt>
+      <trkpt lat="41.009" lon="-2"><time>2026-10-01T08:20:00Z</time></trkpt>
+      <trkpt lat="41.009" lon="-2"><time>2026-10-01T08:50:00Z</time></trkpt>
+      <trkpt lat="41.018" lon="-2"><time>2026-10-01T09:10:00Z</time></trkpt>
+    </trkseg></trk></gpx>`;
+    // 1 km en 20 min, parada de 30 min y otro km en 20 min.
+    expect(parseGpxFull(gpx).times).toEqual({ total: 70 * 60, moving: 40 * 60 });
+  });
+
+  it("el GPX limpio guarda la duración pero no la fecha ni las horas", () => {
+    const { points, times } = parseGpxFull(GPX);
+    expect(times).toEqual({ total: 2400, moving: 2400 });
+    const clean = toCleanGpx(points, "Cascada", times);
+    expect(clean).not.toMatch(/<time>|2026/);
+    expect(parseGpxFull(clean).times).toEqual({ total: 2400, moving: 2400 });
+  });
+
+  it("sin horas, da un tiempo aproximado con los km y las cuestas", () => {
+    // 8 km en llano: 2 h. Con 600 m de subida y bajada: 1,5 h + 1 h = 2,5 h → 2,5 + 2/2.
+    expect(estimatedSeconds({ distance: 8000, ascent: 0, descent: 0 })).toBe(2 * 3600);
+    expect(estimatedSeconds({ distance: 8000, ascent: 600, descent: 600 })).toBe(3.5 * 3600);
+    expect(parseGpxFull(GPX.replace(/<time>[^<]*<\/time>/g, "")).times).toBeNull();
+  });
+
+  it("dice el tiempo con palabras", () => {
+    expect(durationLabel(45 * 60)).toBe("45 min");
+    expect(durationLabel(3 * 3600)).toBe("3 h");
+    expect(durationLabel(3 * 3600 + 22 * 60)).toBe("3 h 20 min");
   });
 });
